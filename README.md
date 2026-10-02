@@ -36,6 +36,7 @@ Desde el menú principal, sin necesidad de haber jugado:
 - Una cinemática de un minuto recorre todas las eras (polvo → nube → protoestrella → estrella → supernova → agujero negro → galaxia). Se puede saltar.
 - Termina en la vista del observatorio, con la galaxia girando en el horizonte, donde se configura el foco, las pausas corta y larga, cada cuántos focos va la pausa larga, el encadenado automático, el viaje de cámara y los volúmenes.
 - Durante la sesión la pantalla queda limpia: un temporizador grande arriba a la izquierda, una cámara que viaja sola por la galaxia (órbitas, horizonte, brazos espirales, nacimientos de estrellas, supernovas suaves, nebulosas, el núcleo) y música ambiental. Las pausas son más cálidas y tranquilas, con campanas en cada cambio.
+- **Tu galaxia evoluciona con tu trabajo:** en cada foco madura (sus brazos se enrollan y se encienden de estrellas jóvenes, aparecen más estrellas, crece y forma una barra central) y con cada pomodoro del ciclo gana un brazo, de 3 a 6. Tras la pausa larga nace una galaxia nueva.
 - El tiempo también se ve en la pestaña del navegador y sigue corriendo aunque cambies de pestaña. `Espacio` pausa, `Esc` vuelve a los ajustes y los controles aparecen al mover el mouse.
 
 ## Controles

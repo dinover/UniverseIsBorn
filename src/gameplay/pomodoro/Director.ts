@@ -13,9 +13,8 @@ interface Shot {
   dur: number;
   /** Event / focus point (for event shots). */
   P: THREE.Vector3;
-  /** Orbit parameters of a moving focus (arm ride). */
-  a: number;
-  th: number;
+  /** Arm followed by the arm ride. */
+  k: number;
   boomed: boolean;
 }
 
@@ -55,12 +54,16 @@ export class Director {
   private ejecta: Ejecta[] = [];
   private flashT = 1;
   private noteT = 3;
-  private fade = 1;
-  private tint = new THREE.Vector3(1, 1, 1);
-  private R: number;
+  /** Galaxy brightness wanted for the current shot (close shots dim it). */
+  dim = 1;
+  // Smooth camera: the focus point eases from where it was to the new subject.
+  private tFrom = new THREE.Vector3();
+  private tTo: () => THREE.Vector3 = () => new THREE.Vector3();
+  private tT = 1;
+  private tDur = 1;
+  private orbit = 0.012;
 
-  constructor(private game: Game, private group: THREE.Group, private gal: GalaxyField) {
-    this.R = gal.params.radius;
+  constructor(private game: Game, private group: THREE.Group, private galaxy: () => GalaxyField) {
     this.glow = new SpriteBatch(3000, 'glow', { stretch: 0.03 });
     this.soft = new SpriteBatch(400, 'soft', { stretch: 0 });
     this.soft.mesh.renderOrder = 5;
@@ -80,6 +83,23 @@ export class Director {
     group.add(this.soft.mesh, this.glow.mesh, this.star);
   }
 
+  private get gal() {
+    return this.galaxy();
+  }
+  private get R() {
+    return this.gal.params.radius;
+  }
+
+  /** Eases the camera's focus to a (possibly moving) point over `dur` seconds. */
+  private focusOn(to: () => THREE.Vector3, dur: number) {
+    const rig = this.game.rig;
+    this.tFrom.copy(rig.focus);
+    this.tTo = to;
+    this.tT = 0;
+    this.tDur = dur;
+    rig.followLambda = 8;
+  }
+
   /** Starts a fresh sequence of shots (e.g. when the timer starts). */
   begin() {
     this.next(true);
@@ -91,11 +111,11 @@ export class Director {
    */
   horizon(dur = 4, setup = false) {
     const g = this.game;
-    const d = this.R * 3.3;
-    g.rig.followLambda = 0.8;
-    g.rig.target.set(0, d * (setup ? -0.147 : 0.031), 0);
+    const d = 600 * 3.3;
+    const target = new THREE.Vector3(0, d * (setup ? -0.147 : 0.031), 0);
+    this.focusOn(() => target, dur);
     g.rig.animate({ distance: d, pitch: setup ? 0.407 : 0.15 }, dur, easeInOut);
-    g.rig.autoOrbit = 0.012;
+    this.orbit = 0.012;
     this.shot = null;
     this.star.visible = false;
   }
@@ -106,14 +126,19 @@ export class Director {
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  /** A point in a spiral arm of the outer disc (the bright core would wash close-ups out). */
-  private armPoint(out: THREE.Vector3) {
-    const s = this.gal.samples;
-    let i = Math.floor(Math.random() * 400);
-    for (let k = 0; k < 20 && s[i * 4] < 0.45; k++) i = Math.floor(Math.random() * 400);
-    this.gal.orbitPos(s[i * 4], s[i * 4 + 1], 0, this.game.time, out);
+  /** A point on a spiral arm of the outer disc (the bright core would wash close-ups out). */
+  private eventPoint(out: THREE.Vector3) {
+    const gal = this.gal;
+    gal.armPoint(0.5 + Math.random() * 0.4, Math.floor(Math.random() * gal.params.arms), this.game.time, out);
     out.y += 8;
     return out;
+  }
+
+  /** Somewhere in the disc, for the background flashes. */
+  private diskPoint(out: THREE.Vector3) {
+    const s = this.gal.samples;
+    const i = Math.floor(Math.random() * 400);
+    return this.gal.orbitPos(s[i * 4], s[i * 4 + 1], 0, this.game.time, out);
   }
 
   next(first = false) {
@@ -122,33 +147,36 @@ export class Director {
     const kind = this.pick();
     this.last = kind;
     const dur = (this.calm ? 45 : 32) + Math.random() * 14;
-    const shot: Shot = { kind, t: 0, dur, P: new THREE.Vector3(), a: 0.45 + Math.random() * 0.3, th: Math.random() * TAU, boomed: false };
+    const shot: Shot = { kind, t: 0, dur, P: new THREE.Vector3(), k: Math.floor(Math.random() * this.gal.params.arms), boomed: false };
     this.shot = shot;
     this.star.visible = false;
-    const glide = first ? 6 : 10;
-    const yaw = rig.state.yaw + (Math.random() - 0.5) * 1.6;
-    rig.followLambda = 0.35;
+    // Long, eased glides and small turns: nothing should feel like a cut.
+    const glide = first ? 8 : 14;
+    const yaw = rig.state.yaw + (Math.random() - 0.5) * 0.9;
+    const origin = new THREE.Vector3();
     switch (kind) {
       case 'orbit':
-        rig.target.set(0, 0, 0);
+        this.focusOn(() => origin, glide);
         rig.animate({ distance: this.R * (2.4 + Math.random() * 0.8), pitch: 0.75 + Math.random() * 0.35, yaw }, glide, easeInOut);
-        rig.autoOrbit = 0.025;
+        this.orbit = 0.02;
         break;
       case 'horizon':
         this.horizon(glide);
         this.shot = shot;
         break;
       case 'arm':
-        rig.animate({ distance: this.R * 0.6, pitch: 0.42, yaw }, glide, easeInOut);
-        rig.autoOrbit = 0.01;
+        // Drift slowly along one spiral arm, from its outer end inwards.
+        this.focusOn(() => this.gal.armPoint(0.88 - 0.45 * clamp(shot.t / shot.dur), shot.k, g.time, new THREE.Vector3()), glide);
+        rig.animate({ distance: this.R * 0.65, pitch: 0.45, yaw }, glide, easeInOut);
+        this.orbit = 0.008;
         break;
       case 'birth':
       case 'supernova':
       case 'nebula':
-        this.armPoint(shot.P);
-        rig.target.copy(shot.P);
+        this.eventPoint(shot.P);
+        this.focusOn(() => shot.P, glide);
         rig.animate({ distance: kind === 'nebula' ? 260 : kind === 'birth' ? 120 : 150, pitch: 0.3 + Math.random() * 0.25, yaw }, glide, easeInOut);
-        rig.autoOrbit = 0.03;
+        this.orbit = 0.022;
         if (kind === 'supernova') {
           this.star.position.copy(shot.P);
           this.star.setRadius(0.001);
@@ -156,37 +184,28 @@ export class Director {
         }
         break;
       case 'core':
-        rig.target.set(0, 0, 0);
+        this.focusOn(() => origin, glide);
         rig.animate({ distance: 80 + Math.random() * 30, pitch: 0.12 + Math.random() * 0.15, yaw }, glide, easeInOut);
-        rig.autoOrbit = 0.035;
+        this.orbit = 0.025;
         break;
     }
   }
 
   update(dt: number) {
     const g = this.game;
-    const time = g.time;
     const sh = this.shot;
     if (sh) {
       sh.t += dt;
-      if (sh.kind === 'arm') {
-        // Ride along with the stars of an arm.
-        const p = this.gal.orbitPos(sh.a, sh.th, 0, time, new THREE.Vector3());
-        g.rig.target.copy(p);
-      }
       if (sh.t >= sh.dur) this.next();
     }
+    // Eased focus (smooth start and stop), and a turning speed that changes gently.
+    this.tT += dt;
+    const k = easeInOut(clamp(this.tT / this.tDur));
+    g.rig.target.copy(this.tFrom).lerp(this.tTo(), k);
+    g.rig.autoOrbit = damp(g.rig.autoOrbit, this.orbit, 0.25, dt);
 
     // Closer shots dim the galaxy a little so nearby stars do not turn into blobs.
-    const dist = g.rig.effectiveDistance;
-    this.fade = damp(this.fade, dist < 400 ? 0.55 : 1, 1.2, dt);
-    this.gal.fade = this.fade;
-    // Breaks: warmer light.
-    const tt = this.calm ? [1.12, 0.96, 0.82] : [0.97, 1, 1.06];
-    this.tint.x = damp(this.tint.x, tt[0], 0.4, dt);
-    this.tint.y = damp(this.tint.y, tt[1], 0.4, dt);
-    this.tint.z = damp(this.tint.z, tt[2], 0.4, dt);
-    this.gal.setTint(this.tint.x, this.tint.y, this.tint.z);
+    this.dim = damp(this.dim, g.rig.effectiveDistance < 400 ? 0.55 : 1, 1.2, dt);
     const bh = g.pipe.bhPass;
     bh.diskIntensity = damp(bh.diskIntensity, sh?.kind === 'core' ? 0.95 : 0.65, 0.8, dt);
 
@@ -194,8 +213,7 @@ export class Director {
     this.flashT -= dt;
     if (this.flashT <= 0) {
       this.flashT = 0.6 + Math.random() * (this.calm ? 2.4 : 1.6);
-      const p = this.armPoint(new THREE.Vector3());
-      p.y -= 8;
+      const p = this.diskPoint(new THREE.Vector3());
       this.flashes.push({ p, t: 0, life: Math.random() < 0.35 ? 2.5 : 4, kind: Math.random() < 0.35 ? 'nova' : 'birth' });
     }
     this.flashes = this.flashes.filter((f) => (f.t += dt) < f.life);
@@ -220,8 +238,8 @@ export class Director {
     // Bulge and nucleus glow, fading as the camera gets close so it never fills the screen.
     const camR = g.camera.position.length();
     const near = smoothstep(180, 700, camR);
-    glow.push(0, 0, 0, 0, 0, 0, 1, 0.8, 0.55, 0.22 * near, 140);
-    glow.push(0, 0, 0, 0, 0, 0, 1, 0.9, 0.75, 0.3 * near, 30);
+    glow.push(0, 0, 0, 0, 0, 0, 1, 0.8, 0.55, 0.13 * near, 140);
+    glow.push(0, 0, 0, 0, 0, 0, 1, 0.9, 0.75, 0.2 * near, 30);
     for (const f of this.flashes) {
       const k = f.t / f.life;
       const a = k < 0.1 ? k * 10 : 1 - (k - 0.1) / 0.9;

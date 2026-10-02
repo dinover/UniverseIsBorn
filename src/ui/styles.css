@@ -594,6 +594,7 @@ input[type=range] { accent-color: var(--accent); width: 180px; }
 .pomo-timer .bar i { display: block; height: 100%; background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); transition: width 1s linear; }
 .pomo-timer[data-kind='short'] .bar i, .pomo-timer[data-kind='long'] .bar i { background: #ffd6a0; box-shadow: 0 0 10px #ffd6a0; }
 .pomo-timer .dots { margin-top: 8px; font-size: 12px; letter-spacing: 0.3em; color: rgba(225, 232, 248, 0.75); }
+.pomo-timer .g { margin-top: 6px; font-size: 11px; letter-spacing: 0.12em; color: rgba(225, 232, 248, 0.6); font-family: var(--font-display); }
 .pomo.idle .pomo-timer { opacity: 0.85; }
 
 .pomo-ctrl { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: none; gap: 8px; padding: 8px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }

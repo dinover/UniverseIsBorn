@@ -13,6 +13,8 @@ export interface GalaxyParams {
   bulge: number; // fraction of bulge stars
   hueShift: number;
   bar?: boolean;
+  /** Fraction of stars that trace the spiral arms directly (young stars, HII knots). */
+  armStars?: number;
 }
 
 const vert = /* glsl */ `
@@ -37,11 +39,34 @@ uniform float uFade;
 uniform float uDark;
 uniform float uBar;
 uniform vec3 uTint;
+uniform float uArmSpread;
 varying vec3 vColor;
 varying float vAlpha;
 
+vec3 applyBar(vec3 p, float a){
+  if (uBar <= 0.0) return p;
+  // Barred spiral: the inner orbits stretch along a slowly rotating bar.
+  float k = uBar * (1.0 - smoothstep(0.06, 0.38, a));
+  float ba = -log(0.38) * uTwist + uTime * uPattern;
+  float c = cos(ba);
+  float s = sin(ba);
+  vec2 q = vec2(c * p.x + s * p.z, -s * p.x + c * p.z);
+  q.x *= 1.0 + 1.1 * k;
+  q.y *= 1.0 - 0.6 * k;
+  return vec3(c * q.x - s * q.y, p.y, s * q.x + c * q.y);
+}
+
 vec3 orbitPos(vec4 o){
   float a = o.x;
+  if (o.w > 4.5){
+    // Arm tracers: placed right on the crest of a spiral arm, turning with the pattern.
+    float k = floor(o.y * uArms);
+    float jit = (fract(o.y * 917.31) - 0.5) * (0.1 + 0.28 * a) * uArmSpread;
+    float e = uEcc * smoothstep(0.06, 0.3, a);
+    float ang = -log(a / (1.0 + e) + 0.03) * uTwist + uTime * uPattern + 6.2831853 * k / uArms + jit;
+    float r = a * uR * (1.0 + (fract(o.y * 331.7) - 0.5) * 0.14 * uArmSpread);
+    return applyBar(vec3(cos(ang) * r, o.z * 0.035 * uR * 0.55, sin(ang) * r), a);
+  }
   float rr = a * uR;
   float omega = uVel / (rr + uR * 0.06);
   float th = o.y + uTime * omega;
@@ -50,20 +75,7 @@ vec3 orbitPos(vec4 o){
   float e = uEcc * smoothstep(0.06, 0.3, a) * step(0.5, o.w);
   float r = rr * (1.0 + e * cos(uArms * (th - phi)));
   float thick = mix(0.32, 0.035, smoothstep(0.0, 0.22, a)) * uR * (o.w < 0.5 ? 1.0 : 0.55);
-  vec3 p = vec3(cos(th) * r, o.z * thick, sin(th) * r);
-  if (uBar > 0.0){
-    // Barred spiral: the inner orbits stretch along a slowly rotating bar.
-    float k = uBar * (1.0 - smoothstep(0.06, 0.38, a));
-    float ba = -log(0.38) * uTwist + uTime * uPattern;
-    float c = cos(ba);
-    float s = sin(ba);
-    vec2 q = vec2(c * p.x + s * p.z, -s * p.x + c * p.z);
-    q.x *= 1.0 + 1.1 * k;
-    q.y *= 1.0 - 0.6 * k;
-    p.x = c * q.x - s * q.y;
-    p.z = s * q.x + c * q.y;
-  }
-  return p;
+  return applyBar(vec3(cos(th) * r, o.z * thick, sin(th) * r), a);
 }
 
 void main(){
@@ -80,7 +92,8 @@ void main(){
   vec3 w = uOrient * p + uCenter;
   vec4 mv = modelViewMatrix * vec4(w, 1.0);
   gl_Position = projectionMatrix * mv;
-  float young = step(1.5, aOrbit.w) * step(aOrbit.w, 2.5);
+  // Young stars and arm tracers respond to uYoung (star formation).
+  float young = step(1.5, aOrbit.w) * step(aOrbit.w, 2.5) + step(4.5, aOrbit.w);
   float s = aSize * uSizeMul * (young > 0.5 ? mix(0.5, 1.0, uYoung) : 1.0);
   gl_PointSize = clamp(s * uPx * 900.0 / max(-mv.z, 1.0), 0.8, 90.0);
   vColor = aColor * uTint * uBright * (young > 0.5 ? mix(0.3, 1.2, uYoung) : 1.0);
@@ -141,6 +154,13 @@ export class GalaxyField extends THREE.Group {
         kind = 4; // gas glow
         c = rng.pick([[0.35, 0.45, 1], [0.9, 0.35, 0.6]]);
         s = rng.range(6, 12);
+      } else if (u < p.bulge + 0.16 + (p.armStars ?? 0)) {
+        // Arm tracers: blue young stars, a few warm ones and pink HII knots.
+        a = 0.1 + Math.pow(rng.next(), 0.85) * 0.9;
+        kind = 5;
+        const v = rng.next();
+        c = v < 0.18 ? [1, 0.4, 0.65] : v < 0.3 ? [1, 0.85, 0.7] : rng.pick([[0.62, 0.76, 1], [0.8, 0.88, 1]]);
+        s = v < 0.18 ? rng.range(5, 10) : rng.range(1.1, 2.4);
       } else {
         // exponential disk
         a = Math.min(1.1, -Math.log(1 - rng.next() * 0.985) * 0.24 + 0.02);
@@ -149,10 +169,11 @@ export class GalaxyField extends THREE.Group {
         s = rng.range(0.5, 1.2);
       }
       const cc = hue(c, p.hueShift);
-      const br = kind === 4 ? 0.12 : kind === 0 ? 0.55 : kind === 2 ? 0.9 : 0.45;
+      const br = kind === 4 ? 0.12 : kind === 0 ? 0.55 : kind === 2 ? 0.9 : kind === 5 ? (s > 4 ? 0.2 : 0.85) : 0.45;
       orbit[i * 4] = a;
-      orbit[i * 4 + 1] = rng.range(0, Math.PI * 2);
-      orbit[i * 4 + 2] = rng.gauss(0, 0.5);
+      // Arm tracers store an arm "slot" in 0..1 instead of an orbital phase.
+      orbit[i * 4 + 1] = kind === 5 ? rng.next() : rng.range(0, Math.PI * 2);
+      orbit[i * 4 + 2] = rng.gauss(0, kind === 5 ? 0.35 : 0.5);
       orbit[i * 4 + 3] = kind;
       color[i * 3] = cc[0] * br;
       color[i * 3 + 1] = cc[1] * br;
@@ -183,6 +204,7 @@ export class GalaxyField extends THREE.Group {
       uDark: { value: 0 },
       uBar: { value: 0 },
       uTint: { value: new THREE.Vector3(1, 1, 1) },
+      uArmSpread: { value: 1 },
     });
     this.starMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms: uniforms(), transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, premultipliedAlpha: true });
     this.stars = new THREE.Points(geo, this.starMat);
@@ -237,17 +259,30 @@ export class GalaxyField extends THREE.Group {
     const r = rr * (1 + e * Math.cos(p.arms * (th - phi)));
     const thick = 0.035 * p.radius * 0.55;
     out.set(Math.cos(th) * r, height * thick, Math.sin(th) * r);
-    if (this.bar > 0) {
-      const k = this.bar * (1 - smoothstep(0.06, 0.38, a));
-      const ba = -Math.log(0.38) * p.twist + time * p.pattern;
-      const c = Math.cos(ba);
-      const s = Math.sin(ba);
-      const qx = (c * out.x + s * out.z) * (1 + 1.1 * k);
-      const qz = (-s * out.x + c * out.z) * (1 - 0.6 * k);
-      out.x = c * qx - s * qz;
-      out.z = s * qx + c * qz;
-    }
+    this.barCpu(out, a, time);
     return out.applyMatrix3(this.orient).add(this.center);
+  }
+
+  /** CPU mirror of an arm tracer: the crest of arm `k` at radius `a` (where the arms are). */
+  armPoint(a: number, k: number, time: number, out = new THREE.Vector3()) {
+    const p = this.params;
+    const e = p.ecc * smoothstep(0.06, 0.3, a);
+    const ang = -Math.log(a / (1 + e) + 0.03) * p.twist + time * p.pattern + (Math.PI * 2 * k) / p.arms;
+    out.set(Math.cos(ang) * a * p.radius, 0, Math.sin(ang) * a * p.radius);
+    this.barCpu(out, a, time);
+    return out.applyMatrix3(this.orient).add(this.center);
+  }
+
+  private barCpu(out: THREE.Vector3, a: number, time: number) {
+    if (this.bar <= 0) return;
+    const k = this.bar * (1 - smoothstep(0.06, 0.38, a));
+    const ba = -Math.log(0.38) * this.params.twist + time * this.params.pattern;
+    const c = Math.cos(ba);
+    const s = Math.sin(ba);
+    const qx = (c * out.x + s * out.z) * (1 + 1.1 * k);
+    const qz = (-s * out.x + c * out.z) * (1 - 0.6 * k);
+    out.x = c * qx - s * qz;
+    out.z = s * qx + c * qz;
   }
 
   private bar = 0;
@@ -266,6 +301,14 @@ export class GalaxyField extends THREE.Group {
   setRadius(r: number) {
     this.params.radius = r;
     this.uniform('uR', r);
+  }
+  setEcc(v: number) {
+    this.params.ecc = v;
+    this.uniform('uEcc', v);
+  }
+  /** Angular spread of the arm tracers (lower = crisper arms). */
+  set armSpread(v: number) {
+    this.starMat.uniforms.uArmSpread.value = v;
   }
   setBar(v: number) {
     this.bar = v;
