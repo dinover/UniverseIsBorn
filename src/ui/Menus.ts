@@ -7,10 +7,12 @@ import type { AudioEngine } from '../audio/AudioEngine';
 import { formatSolar, formatTime, formatBig } from '../utils/math';
 import { stageDef } from '../progression/Stages';
 import { briefing } from '../progression/Briefings';
+import { levelFor } from '../gameplay/sandbox/Catalog';
 
 export interface MenuCallbacks {
   onNewGame(): void;
   onContinue(): void;
+  onSandbox(): void;
   onResume(): void;
   onQuitToTitle(): void;
   onSettings(s: Settings): void;
@@ -24,6 +26,8 @@ export class Menus {
   private stack: string[] = [];
   private continueBtn!: HTMLButtonElement;
   private continueSub!: HTMLElement;
+  private sandboxBtn!: HTMLButtonElement;
+  private sandboxSub!: HTMLElement;
 
   constructor(private parent: HTMLElement, private prog: Progression, private audio: AudioEngine, private cb: MenuCallbacks) {
     this.title = h('div', 'interactive');
@@ -42,6 +46,8 @@ export class Menus {
       if (this.prog.loadRun()) this.confirm('¿Empezar de nuevo?', 'Se sobrescribirá tu partida en curso. Los logros y el códice se conservan.', () => cb.onNewGame());
       else cb.onNewGame();
     });
+    this.sandboxBtn = this.button(menu, 'Modo libre', '', () => cb.onSandbox());
+    this.sandboxSub = this.sandboxBtn.querySelector('small') as HTMLElement;
     this.button(menu, 'Códice', 'Ciencia detrás de cada etapa', () => this.openCodex());
     this.button(menu, 'Logros', 'Y estadísticas', () => this.openAchievements());
     this.button(menu, 'Opciones', '', () => this.openOptions());
@@ -68,6 +74,15 @@ export class Menus {
       const m = run.carry.bhMass ? ` · ${formatSolar(run.carry.bhMass)} M☉` : '';
       this.continueSub.textContent = `Etapa ${st.n}: ${st.name}${m} · ${formatTime(run.time)}`;
     }
+    const sb = this.prog.loadSandbox();
+    const unlocked = this.prog.sandboxUnlocked;
+    this.sandboxBtn.disabled = !unlocked;
+    this.sandboxBtn.classList.toggle('locked', !unlocked);
+    this.sandboxSub.textContent = sb
+      ? `Tu galaxia · nivel ${levelFor(sb.invested)} · ${formatBig(sb.dust)} ✦ · ${formatSolar(sb.mass)} M☉`
+      : unlocked
+        ? 'Tu galaxia te espera: estrellas, nebulosas y calma'
+        : '🔒 Completa el viaje para desbloquearlo';
     const s = this.prog.meta.stats;
     const line = this.title.querySelector('.stats-line') as HTMLElement;
     line.textContent = s.maxMass > 0 ? `Récord: ${formatSolar(s.maxMass)} M☉` : '';
@@ -126,12 +141,18 @@ export class Menus {
     panel.appendChild(a);
   }
 
-  openPause() {
+  /** `sandboxLink`: offer a jump to free mode (story runs, once unlocked). */
+  openPause(sandboxLink = false) {
     this.screen('pause', (p) => {
       p.appendChild(h('h2', '', 'Pausa'));
       const m = h('div', 'menu');
       m.style.cssText = 'display:flex;flex-direction:column;gap:6px';
       this.button(m, 'Continuar', '', () => this.close());
+      if (sandboxLink)
+        this.button(m, 'Ir al modo libre', 'Tu partida queda guardada', () => {
+          this.closeAll();
+          this.cb.onSandbox();
+        });
       this.button(m, 'Códice', '', () => this.openCodex());
       this.button(m, 'Logros', '', () => this.openAchievements());
       this.button(m, 'Opciones', '', () => this.openOptions());
@@ -301,6 +322,7 @@ export class Menus {
         ['Fusiones perfectas', formatBig(st.perfectHits)],
         ['Tiempo con jets', formatTime(st.jetSeconds)],
         ['Universos completados', formatBig(st.runsCompleted)],
+        ['Polvo estelar generado', formatBig(st.stardust)],
       ];
       stats.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
       p.appendChild(stats);
@@ -308,7 +330,10 @@ export class Menus {
     });
   }
 
-  openEnding(mass: number, time: number, onSandbox: () => void, onTitle: () => void) {
+  openEnding(mass: number, time: number, reward: { created: boolean; bonus: number }, onSandbox: () => void, onTitle: () => void) {
+    const unlock = reward.created
+      ? '<b>Modo libre desbloqueado.</b> Tu galaxia te espera para llenarla de estrellas especiales y nebulosas. Puedes volver a ella cuando quieras desde el menú principal.'
+      : `Tu galaxia del modo libre recibe <b>+${formatBig(reward.bonus)} ✦</b> de polvo estelar por este nuevo universo.`;
     this.screen('ending', (p) => {
       p.appendChild(h('div', 'label', 'Fin del viaje... por ahora'));
       p.appendChild(h('h2', '', 'Eres el corazón de una galaxia'));
@@ -316,11 +341,11 @@ export class Menus {
         h(
           'div',
           'codex-body',
-          `Empezaste como un puñado de átomos flotando en la oscuridad. Hoy tienes <b>${formatSolar(mass)}</b> masas solares y decenas de miles de millones de estrellas giran a tu alrededor.<br/><br/>Tiempo total: <b>${formatTime(time)}</b>.<div class="game">Y esta galaxia es solo una entre un billón.</div>`,
+          `Empezaste como un puñado de átomos flotando en la oscuridad. Hoy tienes <b>${formatSolar(mass)}</b> masas solares y decenas de miles de millones de estrellas giran a tu alrededor.<br/><br/>Tiempo total: <b>${formatTime(time)}</b>.<div class="game">Y esta galaxia es solo una entre un billón.</div><div class="game">${unlock}</div>`,
         ),
       );
       this.actions(p, [
-        ['Seguir en modo libre', () => {
+        ['Ir al modo libre', () => {
           this.close();
           onSandbox();
         }],
@@ -330,6 +355,43 @@ export class Menus {
         }],
       ]);
     });
+  }
+
+  /** Free-mode briefing: shown the first time and from the "?" button. */
+  openSandboxBriefing(touch: boolean) {
+    const click = touch ? 'TOCA una nube' : 'CLIC en una nube (o ESPACIO)';
+    const jets = touch ? 'el botón 2' : 'CLIC DERECHO';
+    const shop = touch ? 'el botón <b>✦ Tienda</b>' : '<b>T</b> o el botón <b>✦ Tienda</b>';
+    this.screen(
+      'briefing',
+      (p) => {
+        p.classList.add('briefing');
+        p.appendChild(h('div', 'label', 'MODO LIBRE'));
+        p.appendChild(h('h2', '', 'Tu galaxia'));
+        p.appendChild(h('div', 'brief-feel', '“Ahora todo esto es mío.”'));
+        p.appendChild(h('div', 'brief-goal', `<div class="label">Sin prisa, sin objetivos</div><div>Genera <b>polvo estelar ✦</b> y gástalo en la tienda para llenar tu galaxia de estrellas especiales y nebulosas, y cambiar su forma y sus colores.</div>`));
+        p.appendChild(h('div', 'label', 'Cómo funciona'));
+        p.appendChild(
+          h(
+            'ul',
+            'brief-how',
+            [
+              '<b>Producción pasiva:</b> tu galaxia genera ✦ sola, incluso mientras no juegas. Cada estrella especial suma producción; las nebulosas la multiplican.',
+              `<b>Canaliza nubes</b> (${click}): cada una da ✦ al instante. Cuando el cuásar se cargue, libera la energía con los <b>jets</b> (${jets}) y gana todavía más.`,
+              'Los <b>cúmulos globulares</b> que caen hacia el centro también dan ✦: haz clic para acelerarlos.',
+              '<b>Tu galaxia crece:</b> lo que inviertes en estrellas y nebulosas sube su <b>nivel</b>: más grande, más estrellas, más zoom (aléjate con la rueda) y +5% de producción por nivel.',
+              `Abre la tienda con ${shop}. No te comas todo el gas: con la <b>formación estelar</b> alta produces más.`,
+              `<b>Observatorio</b> (${touch ? 'botón ◎' : 'tecla O'}): seis minijuegos que se desbloquean al crecer, con récords, estrellas ★ y mucho polvo estelar. Cada partida usa una carga de energía ◆ que se recarga sola.`,
+            ]
+              .map((x) => `<li>${x}</li>`)
+              .join(''),
+          ),
+        );
+        this.actions(p, [['¡A disfrutar!', () => this.close()]]);
+        (p.querySelector('.actions .btn') as HTMLElement)?.focus({ preventScroll: true });
+      },
+      true,
+    );
   }
 }
 

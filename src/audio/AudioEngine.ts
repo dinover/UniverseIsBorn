@@ -419,6 +419,31 @@ export class AudioEngine {
     [0, 4, 7, 12].forEach((s, k) => this.tone(semi(523.25, s), 1.2, { gain: 0.07, reverb: 0.9, delay: k * 0.09, type: 'triangle' }));
   }
 
+  /** Bell-like note of a major pentatonic scale (minigames: memory melodies, chimes). */
+  note(i: number, dur = 0.7, gain = 0.1) {
+    const PENTA = [0, 2, 4, 7, 9];
+    const st = PENTA[((i % 5) + 5) % 5] + 12 * Math.floor(i / 5);
+    const f = semi(392, st);
+    this.tone(f, dur, { type: 'triangle', gain, reverb: 0.8 });
+    this.tone(f * 2, dur * 0.6, { gain: gain * 0.35, reverb: 0.8 });
+  }
+
+  /** Heartbeat of a star (rhythm minigame). `strong` marks the beat to hit. */
+  beat(strong = true) {
+    this.tone(strong ? 62 : 48, 0.28, { to: 34, gain: strong ? 0.38 : 0.18 });
+    if (strong) this.noise(0.08, { from: 1800, to: 300, gain: 0.05 });
+  }
+
+  /** Short wrong-answer buzz. */
+  buzz() {
+    this.tone(140, 0.35, { type: 'square', gain: 0.05, to: 90 });
+  }
+
+  /** Tiny sparkle for collecting things. */
+  sparkle(pitch = 0) {
+    this.tone(semi(1046.5, pitch), 0.35, { gain: 0.05, reverb: 0.7 });
+  }
+
   ui(kind: 'hover' | 'click' | 'open' | 'back' = 'click') {
     if (kind === 'hover') this.tone(1800, 0.06, { gain: 0.015 });
     else if (kind === 'click') this.tone(900, 0.12, { gain: 0.05, to: 1300, reverb: 0.3 });

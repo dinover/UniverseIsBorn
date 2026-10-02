@@ -31,6 +31,11 @@ export abstract class Phase {
   /** Optional: debug helper to add progress. */
   debugBoost(): void {}
 
+  /** Optional: phase-specific help for the "?" button. Returns true if it handled it. */
+  help(): boolean {
+    return false;
+  }
+
   /** Primary/secondary labels for touch buttons. */
   touchLabels(): [string | null, string | null] {
     return [null, null];

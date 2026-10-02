@@ -8,7 +8,7 @@ import { AudioEngine } from '../audio/AudioEngine';
 import { Hud } from '../ui/Hud';
 import { Menus, TouchControls } from '../ui/Menus';
 import { Progression } from '../progression/Progression';
-import { SaveSystem, type PhaseId, type RunCarry, type Settings } from '../persistence/SaveSystem';
+import { SaveSystem, type PhaseId, type RunCarry, type SandboxState, type Settings } from '../persistence/SaveSystem';
 import { Sky, SKY_PRESETS } from '../vfx/Sky';
 import { Motes } from '../vfx/Effects';
 import { Rng, randomSeed } from '../procgen/rng';
@@ -16,8 +16,12 @@ import type { Phase } from '../gameplay/Phase';
 import { stageDef } from '../progression/Stages';
 import { codexById } from '../progression/Codex';
 import { achievementById } from '../progression/Achievements';
+import { SandboxEconomy, createSandboxState, randomGalaxyBase } from '../gameplay/sandbox/Economy';
+import type { GalaxyParams } from '../vfx/GalaxyField';
 
 export type PhaseFactory = (game: Game, carry: RunCarry) => Phase;
+/** Everything that can own the scene: story phases, the title backdrop and free mode. */
+export type SceneId = PhaseId | 'title' | 'sandbox';
 
 type Mode = 'title' | 'playing' | 'paused' | 'transition';
 
@@ -44,7 +48,8 @@ export class Game {
   time = 0;
   mode: Mode = 'title';
   phase: Phase | null = null;
-  private factories = new Map<PhaseId | 'title', PhaseFactory>();
+  private sceneId: SceneId = 'title';
+  private factories = new Map<SceneId, PhaseFactory>();
   last = performance.now();
   private fpsEl: HTMLElement;
   debug = new URLSearchParams(location.search).has('debug');
@@ -57,6 +62,7 @@ export class Game {
 
   constructor(private container: HTMLElement, private uiRoot: HTMLElement) {
     this.prog = new Progression(this.save, this.bus);
+    this.migrateLegacySandbox();
     const settings = this.prog.meta.settings;
     this.quality = new QualityManager(settings.quality);
     this.rig = new CameraRig(window.innerWidth / window.innerHeight);
@@ -78,6 +84,7 @@ export class Game {
     this.menus = new Menus(uiRoot, this.prog, this.audio, {
       onNewGame: () => this.newGame(),
       onContinue: () => this.continueGame(),
+      onSandbox: () => this.startSandbox(),
       onResume: () => this.resume(),
       onQuitToTitle: () => this.quitToTitle(),
       onSettings: (s) => this.applySettings(s),
@@ -107,7 +114,7 @@ export class Game {
     if (this.debug) this.installDebug();
   }
 
-  register(id: PhaseId | 'title', f: PhaseFactory) {
+  register(id: SceneId, f: PhaseFactory) {
     this.factories.set(id, f);
   }
 
@@ -148,8 +155,14 @@ export class Game {
   // ------------------------------------------------------------------ flow
   start() {
     const params = new URLSearchParams(location.search);
-    const jump = params.get('phase') as PhaseId | null;
-    if (this.debug && jump && this.factories.has(jump)) {
+    const jump = params.get('phase') as SceneId | null;
+    if (this.debug && jump === 'sandbox') {
+      this.ensureSandbox();
+      this.prog.run = null;
+      this.menus.showTitle(false);
+      this.mode = 'playing';
+      this.switchPhase('sandbox', {});
+    } else if (this.debug && jump && jump !== 'title' && jump !== 'sandbox' && this.factories.has(jump)) {
       const seed = randomSeed();
       this.rng = new Rng(seed);
       const carry: RunCarry = { cloudMass: 4000, starMass: 24, coreQuality: 0.8, remnant: 'bh', bhMass: Number(params.get('mass') ?? 6) };
@@ -192,7 +205,52 @@ export class Game {
     this.beginPlay(run.phase, run.carry);
   }
 
-  private async beginPlay(id: PhaseId, carry: RunCarry) {
+  // ------------------------------------------------------------------ free mode
+  /** Older saves kept a finished run alive as free mode: move it to its own save. */
+  private migrateLegacySandbox() {
+    const run = this.prog.loadRun();
+    if (run?.phase !== 'galaxy' || (run.carry.galaxyStage ?? 0) < 3) return;
+    if (!this.prog.loadSandbox()) this.prog.saveSandbox(createSandboxState(run.seed, run.carry.bhMass ?? 2e8, randomGalaxyBase(new Rng(run.seed))));
+    this.prog.clearRun();
+  }
+
+  /** Free mode is unlocked by finishing the story once. Creates the galaxy on first use. */
+  ensureSandbox(): SandboxState | null {
+    const s = this.prog.loadSandbox();
+    if (s) return s;
+    if (!this.prog.sandboxUnlocked && !this.debug) return null;
+    const seed = randomSeed();
+    const fresh = createSandboxState(seed, Math.max(2e8, this.prog.meta.stats.maxMass), randomGalaxyBase(new Rng(seed)));
+    this.prog.saveSandbox(fresh);
+    return fresh;
+  }
+
+  startSandbox() {
+    if (!this.ensureSandbox()) return;
+    // A story run in progress stays saved as it is: free mode never touches it.
+    this.prog.saveRunNow();
+    this.audio.suspend(false);
+    this.prog.run = null;
+    this.beginPlay('sandbox', {});
+  }
+
+  /** End of the story: creates the free-mode galaxy, or rewards the existing one. */
+  completeStory(mass: number, p: GalaxyParams): { created: boolean; bonus: number } {
+    const s = this.prog.loadSandbox();
+    if (!s) {
+      const base = { arms: p.arms, twist: p.twist, ecc: p.ecc, bulge: p.bulge, hueShift: p.hueShift };
+      this.prog.saveSandbox(createSandboxState(this.prog.run?.seed ?? randomSeed(), mass, base));
+      return { created: true, bonus: 0 };
+    }
+    const eco = new SandboxEconomy(s);
+    const bonus = Math.max(1000, eco.production * 600); // ten minutes of production
+    eco.earn(bonus);
+    this.prog.add('stardust', bonus);
+    this.prog.saveSandbox(s);
+    return { created: false, bonus };
+  }
+
+  private async beginPlay(id: SceneId, carry: RunCarry) {
     this.lastBriefed = 0;
     this.briefQueue = [];
     this.stage = 0;
@@ -226,7 +284,7 @@ export class Game {
     this.prog.saveRunNow();
   }
 
-  private switchPhase(id: PhaseId | 'title', carry: RunCarry) {
+  private switchPhase(id: SceneId, carry: RunCarry) {
     if (this.phase) this.phase.exit();
     this.hud.clearMarkers();
     this.hud.clearWidget();
@@ -243,8 +301,9 @@ export class Game {
     this.pipe.exposure = 1;
     this.rig.autoOrbit = 0;
     this.rig.zoomBias = 1;
-    this.rig.minZoom = id === 'galaxy' ? 0.08 : 0.6;
-    this.rig.maxZoom = id === 'galaxy' ? 2.2 : 1.8;
+    const galaxy = id === 'galaxy' || id === 'sandbox';
+    this.rig.minZoom = galaxy ? 0.08 : 0.6;
+    this.rig.maxZoom = galaxy ? 2.2 : 1.8;
     this.rig.offset.set(0, 0, 0);
     this.rig.followLambda = 3.5;
     this.pipe.final.saturation = 1.05;
@@ -253,6 +312,7 @@ export class Game {
     this.timeScale = 1;
     const f = this.factories.get(id);
     if (!f) throw new Error('Unknown phase ' + id);
+    this.sceneId = id;
     this.phase = f(this, carry);
     this.scene.add(this.phase.group);
     this.phase.enter();
@@ -299,7 +359,7 @@ export class Game {
     if (this.mode !== 'playing') return;
     this.mode = 'paused';
     this.audio.suspend(true);
-    if (openMenu) this.menus.openPause();
+    if (openMenu) this.menus.openPause(this.sceneId !== 'sandbox' && this.prog.sandboxUnlocked);
   }
 
   resume() {
@@ -312,6 +372,7 @@ export class Game {
   openHelp() {
     this.hud.helpBtn.classList.remove('pulse');
     if (this.mode === 'playing') this.pause(false);
+    if (this.phase?.help()) return;
     if (!this.menus.openBriefing(this.stage, this.input.touchMode, () => this.openCodexEntry(stageDef(this.stage).codex))) this.openCodexEntry(stageDef(this.stage).codex);
   }
 

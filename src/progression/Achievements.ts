@@ -23,6 +23,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'billion', title: 'Monstruo cósmico', desc: 'Alcanza mil millones de masas solares.', icon: '✺' },
   { id: 'galaxy_merge', title: 'Dos galaxias, un corazón', desc: 'Completa la fusión galáctica.', icon: '✴' },
   { id: 'scholar', title: 'Mente curiosa', desc: 'Lee 8 entradas del códice.', icon: '❖' },
+  { id: 'sb_first', title: 'Jardinero cósmico', desc: 'Compra tu primer astro en el modo libre.', icon: '✧' },
+  { id: 'sb_collector', title: 'Coleccionista', desc: 'Reúne 50 astros en tu galaxia.', icon: '❂' },
+  { id: 'sb_nebulae', title: 'Jardín de nebulosas', desc: 'Ten una nebulosa de cada tipo.', icon: '❀' },
+  { id: 'sb_level10', title: 'Galaxia monumental', desc: 'Lleva tu galaxia al nivel 10.', icon: '◉' },
+  { id: 'sb_level20', title: 'Gigante del cosmos', desc: 'Lleva tu galaxia al nivel 20.', icon: '✹' },
+  { id: 'mg_first', title: 'Astrónomo aficionado', desc: 'Juega tu primer minijuego en el Observatorio.', icon: '◎' },
+  { id: 'mg_supernova', title: 'Cazador de supernovas', desc: 'Consigue ★★★ en Lluvia de supernovas.', icon: '✸' },
+  { id: 'mg_hypernova', title: 'Hipernova', desc: 'Haz estallar una estrella sin fallar ni un latido.', icon: '✺' },
+  { id: 'mg_memory10', title: 'Memoria cósmica', desc: 'Llega al nivel 10 en Memoria estelar.', icon: '♫' },
+  { id: 'mg_constellations', title: 'Cartógrafo del cielo', desc: 'Completa las 12 constelaciones.', icon: '✧' },
+  { id: 'mg_dwarf3', title: 'Caníbal galáctico', desc: 'Absorbe las tres galaxias enanas.', icon: '◉' },
+  { id: 'mg_slingshot', title: 'Asistencia gravitatoria', desc: 'Encadena dos asistencias con un mismo cometa.', icon: '☄' },
 ];
 
 export const achievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);

@@ -6,8 +6,11 @@ import { GalaxyField } from '../../vfx/GalaxyField';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, damp, easeInOut, easeOutCubic, formatSolar, lerp, TAU } from '../../utils/math';
 import { h } from '../../ui/Hud';
-import type { Rng } from '../../procgen/rng';
+import { Rng } from '../../procgen/rng';
 import type { LoopHandle } from '../../audio/AudioEngine';
+import type { Game } from '../../core/Game';
+import type { RunCarry } from '../../persistence/SaveSystem';
+import { SandboxMode } from '../sandbox/SandboxMode';
 
 type GState = 'reveal' | 'feed' | 'grow1' | 'satellite' | 'grow2' | 'merger' | 'ending' | 'sandbox';
 
@@ -36,6 +39,8 @@ const GOAL2 = 1.5e8;
  * STAGES 14 & 15 — Supermassive black hole at the heart of a living galaxy.
  * The player channels gas clouds to the centre, manages quasar feedback with jets,
  * cannibalises a satellite galaxy and survives a full galaxy collision.
+ * With `sandbox` it hosts free mode instead: the same living galaxy, no goals,
+ * plus the economy and shop of `SandboxMode`.
  */
 export class GalaxyPhase extends Phase {
   id = 'galaxy' as const;
@@ -77,6 +82,13 @@ export class GalaxyPhase extends Phase {
   private eventT = 25;
   private sizeBoost = 1;
   private clusterInfall: { th: number; r: number; alive: boolean; mass: number; pos: THREE.Vector3 } | null = null;
+  private sb: SandboxMode | null = null;
+  /** Galaxy size multiplier (grows with the free-mode level). */
+  private S = 1;
+
+  constructor(game: Game, carry: RunCarry, private sandbox = false) {
+    super(game, carry);
+  }
 
   touchLabels(): [string | null, string | null] {
     return ['Canalizar', 'Jets'];
@@ -85,25 +97,28 @@ export class GalaxyPhase extends Phase {
   enter() {
     const g = this.game;
     g.hud.show(true);
-    this.rng = g.rng.fork(14);
-    this.M = Math.max(1e6, this.carry.bhMass ?? 1e6);
+    const sb = this.sandbox ? g.prog.loadSandbox() : null;
+    if (this.sandbox && !sb) throw new Error('Free mode started without a sandbox save');
+    this.rng = sb ? new Rng(sb.seed) : g.rng.fork(14);
+    this.M = sb ? sb.mass : Math.max(1e6, this.carry.bhMass ?? 1e6);
     const resumed = (this.carry.galaxyStage ?? 0) > 0;
-    g.setStage(14, resumed);
+    if (!sb) g.setStage(14, resumed);
     g.audio.setEra('galaxy');
     g.sky.set(SKY_PRESETS.cluster, 0);
     g.motes.alpha = 0;
     const q = g.quality.profile;
+    const base = sb?.base;
     this.gal = new GalaxyField(
       {
         count: q.galaxyStars,
         radius: RG,
-        arms: this.rng.pick([2, 2, 3, 4]),
-        twist: this.rng.range(1.4, 2.2),
-        ecc: this.rng.range(0.34, 0.45),
+        arms: base?.arms ?? this.rng.pick([2, 2, 3, 4]),
+        twist: base?.twist ?? this.rng.range(1.4, 2.2),
+        ecc: base?.ecc ?? this.rng.range(0.34, 0.45),
         pattern: 0.012,
         vel: 42,
-        bulge: this.rng.range(0.12, 0.2),
-        hueShift: this.rng.range(-0.5, 0.5),
+        bulge: base?.bulge ?? this.rng.range(0.12, 0.2),
+        hueShift: base?.hueShift ?? this.rng.range(-0.5, 0.5),
       },
       this.rng,
     );
@@ -120,6 +135,14 @@ export class GalaxyPhase extends Phase {
     this.jetDown = new JetBeam(0xcfe4ff, 0x8a6bff);
     this.group.add(this.jetUp, this.jetDown);
 
+    if (sb) {
+      this.sb = new SandboxMode(g, sb, { gal: this.gal, group: this.group, jets: [this.jetUp, this.jetDown], setBusy: (v) => (this.cinematic = v) });
+      this.S = this.sb.scale;
+      this.cloudN = this.sb.cloudCap;
+      this.eventT = this.sb.clusterInterval(() => this.rng.next());
+      this.buildWeb(RG * 6);
+      this.web!.alpha = 0;
+    }
     for (let i = 0; i < this.cloudN; i++) this.spawnCloud();
 
     const bh = g.pipe.bhPass;
@@ -132,8 +155,15 @@ export class GalaxyPhase extends Phase {
     bh.diskHeat = 0.7;
     bh.diskNormal.set(0.1, 1, 0.3).normalize();
 
-    if (resumed) {
-      this.state = (this.carry.galaxyStage ?? 0) >= 3 ? 'sandbox' : (this.carry.galaxyStage ?? 0) >= 2 ? 'grow2' : 'grow1';
+    if (this.sb) {
+      this.state = 'sandbox';
+      g.sky.set(SKY_PRESETS.intergalactic, 0);
+      const d = this.sb.viewDistance;
+      g.rig.setImmediate({ distance: d * 0.55, pitch: 0.75, yaw: 0.4, fov: 50 }, new THREE.Vector3());
+      g.rig.animate({ distance: d, pitch: 0.95, yaw: 1.1 }, 7);
+      this.sb.enter((s) => this.wait(s));
+    } else if (resumed) {
+      this.state = (this.carry.galaxyStage ?? 0) >= 2 ? 'grow2' : 'grow1';
       g.setStage(15, true);
       g.sky.set(SKY_PRESETS.intergalactic, 0);
       g.rig.setImmediate({ distance: 1500, pitch: 0.95, yaw: 0.4, fov: 50 }, new THREE.Vector3());
@@ -187,8 +217,13 @@ export class GalaxyPhase extends Phase {
     this.tutorial('g_feed', `Ahora dominas el centro. Las <b>nubes de gas</b> de los brazos están marcadas con <b>anillos</b>. ${g.input.touchMode ? 'Tócalas' : 'Haz <kbd>CLIC</kbd> cerca de una'} (o pulsa <kbd>${g.input.touchMode ? 'CANALIZAR' : 'ESPACIO'}</kbd>) para que caiga en espiral hacia ti. <kbd>${g.input.touchMode ? 'JETS' : 'CLIC DER'}</kbd> dispara los jets del cuásar.`, 11);
   }
 
+  help() {
+    return this.sb ? this.sb.help() : false;
+  }
+
   debugSkip() {
-    if (this.state === 'feed') this.feeds = 3;
+    if (this.sb) this.sb.debugDust();
+    else if (this.state === 'feed') this.feeds = 3;
     else if (this.state === 'grow1') this.M = GOAL1;
     else if (this.state === 'satellite') this.satEaten = 1;
     else if (this.state === 'grow2') this.M = GOAL2;
@@ -196,6 +231,7 @@ export class GalaxyPhase extends Phase {
   }
   debugBoost() {
     this.M *= 1.5;
+    this.sb?.debugDust();
   }
 
   update(dt: number) {
@@ -276,20 +312,28 @@ export class GalaxyPhase extends Phase {
       const vent = Math.min(this.Q, dt * 0.3);
       this.Q -= vent;
       this.lobes += vent;
+      this.sb?.onVent(vent);
       g.prog.add('jetSeconds', dt);
     }
+    // Free mode runs for hours: old radio lobes slowly fade instead of growing forever.
+    if (this.sb) this.lobes = damp(this.lobes, 0, 0.05, dt);
     this.Q = clamp(this.Q - dt * 0.012);
     if (this.Q >= 1 && this.frenzy <= 0) this.outburst();
 
     // --- Vitality: star formation depends on the gas left in the arms
+    if (this.sb) this.cloudN = this.sb.cloudCap;
     const alive = this.clouds.filter((c) => c.alive && c.infall === 0).length;
     this.V = damp(this.V, clamp(alive / this.cloudN), 0.5, dt);
     this.gal.young = this.V;
     this.gal.brightness = 0.85 + this.V * 0.25 + this.frenzy * 0.3;
     if (this.V < 0.35 && this.state !== 'reveal') this.tutorial('g_vital', 'Estás consumiendo el gas demasiado rápido: la <b>formación estelar</b> se apaga. Una galaxia viva también te alimenta. Deja que las nubes se regeneren.', 8);
-    this.regenT -= dt * (0.9 + this.V * 1.5);
+    this.regenT -= dt * (0.9 + this.V * 1.5) * (this.sb?.regenMul ?? 1);
     // A healthy galaxy feeds its nucleus steadily (stellar winds, gas recycling).
-    if (this.state === 'feed' || this.state === 'grow1' || this.state === 'grow2' || this.state === 'satellite' || this.state === 'sandbox') {
+    if (this.sb) {
+      // Free mode lasts for hours: much slower growth, flattening past ~10^10 M☉.
+      this.M += (this.M * 0.0005 * this.V * this.V * dt) / (1 + this.M / 5e10);
+      this.game.bus.emit('massChanged', { mass: this.M });
+    } else if (this.state === 'feed' || this.state === 'grow1' || this.state === 'grow2' || this.state === 'satellite') {
       this.M += this.M * 0.006 * this.V * this.V * dt;
       this.game.bus.emit('massChanged', { mass: this.M });
     }
@@ -299,6 +343,11 @@ export class GalaxyPhase extends Phase {
     }
     this.clouds = this.clouds.filter((c) => c.alive);
 
+    if (this.sb) {
+      this.sb.update(dt, { t: this.t, V: this.V, Q: this.Q, M: this.M, cloudHovered: !!this.hover });
+      this.S = this.sb.scale;
+      if (this.web) this.web.alpha = this.sb.webAlpha();
+    }
     this.updateEvents(dt);
     this.updateState(dt);
     this.render(dt);
@@ -310,7 +359,7 @@ export class GalaxyPhase extends Phase {
     const g = this.game;
     c.infall = 0.0001;
     c.from.copy(c.pos);
-    c.mass = this.M * (0.12 + 0.1 * this.V);
+    c.mass = this.sb ? this.M * 0.03 : this.M * (0.12 + 0.1 * this.V);
     this.cooldown = 0.6;
     this.idleHint = 0;
     g.audio.whoosh(0.3);
@@ -329,7 +378,8 @@ export class GalaxyPhase extends Phase {
     g.pipe.bloomBoost = 1;
     g.pipe.final.shockwave(new THREE.Vector3(), 0.4, 1.2, 0.3);
     g.audio.capture(0.9);
-    g.hud.floater(`+${formatSolar(c.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffd9a0', 16, 1.6);
+    if (this.sb) this.sb.onCloud();
+    else g.hud.floater(`+${formatSolar(c.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffd9a0', 16, 1.6);
     if (this.Q > 0.75) this.tutorial('g_vent', `¡El cuásar se sobrecalienta! Mantén <kbd>${g.input.touchMode ? 'JETS' : 'CLIC DER'}</kbd> para liberar energía por los jets. Si llega al máximo, expulsará el gas de tu galaxia.`, 9);
   }
 
@@ -344,7 +394,8 @@ export class GalaxyPhase extends Phase {
     g.shake(0.5);
     g.audio.boom();
     g.prog.discover('feedback');
-    g.hud.titleCard('Retroalimentación', 'EL CUÁSAR EXPULSA EL GAS', 'Perdiste nubes: tu galaxia forma menos estrellas', 4);
+    if (this.sb) g.hud.toast('✺', 'El cuásar expulsó el gas', 'Perdiste nubes. Usa los jets antes de que llegue al máximo.');
+    else g.hud.titleCard('Retroalimentación', 'EL CUÁSAR EXPULSA EL GAS', 'Perdiste nubes: tu galaxia forma menos estrellas', 4);
   }
 
   private updateEvents(dt: number) {
@@ -362,22 +413,24 @@ export class GalaxyPhase extends Phase {
     if (this.state === 'merger' || this.state === 'ending' || this.cinematic) return;
     this.eventT -= dt;
     if (this.eventT <= 0 && !this.clusterInfall) {
-      this.eventT = this.rng.range(35, 55);
-      this.clusterInfall = { th: this.rng.range(0, TAU), r: RG * 0.7, alive: true, mass: this.M * 0.1, pos: new THREE.Vector3() };
-      g.hud.toast('✦', 'Cúmulo globular en caída', 'Cae hacia el centro. Haz clic sobre él para acelerarlo.');
+      this.eventT = this.sb ? this.sb.clusterInterval(() => this.rng.next()) : this.rng.range(35, 55);
+      this.clusterInfall = { th: this.rng.range(0, TAU), r: this.gal.params.radius * 0.7, alive: true, mass: this.M * (this.sb ? 0.02 : 0.1), pos: new THREE.Vector3() };
+      if (!this.sb) g.hud.toast('✦', 'Cúmulo globular en caída', 'Cae hacia el centro. Haz clic sobre él para acelerarlo.');
     }
     const ci = this.clusterInfall;
     if (ci) {
-      ci.r -= dt * 22;
+      ci.r -= dt * 22 * this.S;
       ci.th += dt * (40 / Math.max(ci.r, 30));
       ci.pos.set(Math.cos(ci.th) * ci.r, 20, Math.sin(ci.th) * ci.r);
+      if (this.sb && ci.r > 60) g.hud.marker('cluster', ci.pos.clone().add(new THREE.Vector3(0, 30 * this.S, 0)), `Cúmulo globular<div class="m">${g.input.touchMode ? 'tócalo' : 'clic'}: acelerar · da ✦</div>`, 'prey');
       if (ci.r < 15) {
         this.M += ci.mass;
         g.bus.emit('massChanged', { mass: this.M });
         g.prog.add('captures', 1);
         g.audio.capture(1);
         g.pipe.final.shockwave(new THREE.Vector3(), 0.5, 1, 0.4);
-        g.hud.floater(`CÚMULO · +${formatSolar(ci.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffe0a0', 16, 1.8);
+        if (this.sb) this.sb.onCluster(new THREE.Vector3(0, 20, 0));
+        else g.hud.floater(`CÚMULO · +${formatSolar(ci.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffe0a0', 16, 1.8);
         this.clusterInfall = null;
       }
     }
@@ -600,29 +653,24 @@ export class GalaxyPhase extends Phase {
     g.rig.animate({ distance: 90000, pitch: 1.1, yaw: g.rig.state.yaw + 0.8 }, 12, easeInOut);
     g.hud.titleCard('La red cósmica', 'ZOOM OUT', 'Tu galaxia es un punto entre miles de millones', 6);
     await this.wait(12.5);
+    const time = g.prog.run?.time ?? 0;
     g.finishRun();
-    this.persist(3);
+    // The journey is over: the run is cleared and the galaxy lives on in free mode.
+    const reward = g.completeStory(this.M, this.gal.params);
+    g.prog.clearRun();
     g.pipe.final.letterboxTarget = 0;
     g.pause(false);
     g.menus.openEnding(
       this.M,
-      g.prog.run?.time ?? 0,
-      () => {
-        g.resume();
-        this.state = 'sandbox';
-        this.cinematic = false;
-        if (this.web) this.web.mesh.visible = false;
-        g.setStage(15, true);
-        g.rig.animate({ distance: 1600, pitch: 0.95 }, 6);
-      },
-      () => {
-        g.prog.clearRun();
-        g.quitToTitle();
-      },
+      time,
+      reward,
+      () => g.startSandbox(),
+      () => g.quitToTitle(),
     );
   }
 
-  private buildWeb() {
+  /** Cosmic web of galaxies; `clearR` keeps the space around our own galaxy empty. */
+  private buildWeb(clearR = 0) {
     const g = this.game;
     const n = Math.floor(9000 * g.quality.profile.particles + 2000);
     this.web = this.track(new SpriteBatch(n + 200, 'glow', { stretch: 0 }));
@@ -641,17 +689,21 @@ export class GalaxyPhase extends Phase {
           const f = this.rng.next();
           const p = a.clone().lerp(b, f);
           const spread = 1400 * (0.3 + Math.sin(f * Math.PI));
-          w.push(p.x + this.rng.gauss(0, spread), p.y + this.rng.gauss(0, spread), p.z + this.rng.gauss(0, spread), 0, 0, 0, 0.55, 0.6, 1, 0.5, this.rng.range(120, 380));
+          p.set(p.x + this.rng.gauss(0, spread), p.y + this.rng.gauss(0, spread), p.z + this.rng.gauss(0, spread));
           placed++;
+          if (clearR && p.length() < clearR) continue;
+          w.push(p.x, p.y, p.z, 0, 0, 0, 0.55, 0.6, 1, 0.5, this.rng.range(120, 380));
         }
       }
       // cluster of galaxies at the node
+      if (clearR && i === 0) continue;
       for (let k = 0; k < 20; k++) w.push(a.x + this.rng.gauss(0, 900), a.y + this.rng.gauss(0, 900), a.z + this.rng.gauss(0, 900), 0, 0, 0, 1, 0.85, 0.7, 0.9, this.rng.range(250, 600));
     }
     w.end();
   }
 
   private persist(galaxyStage?: number) {
+    if (this.sb) return;
     const cur = this.game.prog.run?.carry.galaxyStage ?? 0;
     this.game.saveCarry({ bhMass: this.M, stage: this.game.stage, galaxyStage: galaxyStage ?? cur });
   }
@@ -659,6 +711,7 @@ export class GalaxyPhase extends Phase {
   exit() {
     this.jetLoop?.stop(0.3);
     this.spin?.el.remove();
+    this.sb?.dispose();
     this.gal.dispose();
     this.sat?.dispose();
     this.comp?.dispose();
@@ -674,17 +727,18 @@ export class GalaxyPhase extends Phase {
     soft.begin();
     // Bulge & nucleus glow
     const act = this.Q + this.frenzy * 0.2;
-    glow.push(0, 0, 0, 0, 0, 0, 1, 0.8, 0.55, 0.22, 140 * this.sizeBoost);
-    glow.push(0, 0, 0, 0, 0, 0, 1, 0.9, 0.75, 0.25 + act * 0.5, 30);
+    const cs = Math.pow(this.S, 0.7); // gameplay objects grow a bit slower than the galaxy
+    glow.push(0, 0, 0, 0, 0, 0, 1, 0.8, 0.55, 0.22, 140 * this.sizeBoost * this.S);
+    glow.push(0, 0, 0, 0, 0, 0, 1, 0.9, 0.75, 0.25 + act * 0.5, 30 * Math.sqrt(this.S));
     // Clouds
     for (const c of this.clouds) {
       const sel = c === this.hover;
       for (let k = 0; k < 7; k++) {
         const a = k * 2.39996 + c.th0;
-        const rr = 8 + (k % 3) * 9;
-        soft.push(c.pos.x + Math.cos(a) * rr, c.pos.y, c.pos.z + Math.sin(a) * rr, 0, 0, 0, c.color[0], c.color[1], c.color[2], sel ? 0.35 : 0.2, 30);
+        const rr = (8 + (k % 3) * 9) * cs;
+        soft.push(c.pos.x + Math.cos(a) * rr, c.pos.y, c.pos.z + Math.sin(a) * rr, 0, 0, 0, c.color[0], c.color[1], c.color[2], sel ? 0.35 : 0.2, 30 * cs);
       }
-      glow.push(c.pos.x, c.pos.y, c.pos.z, 0, 0, 0, c.color[0], c.color[1], c.color[2], sel ? 1.2 : 0.6, 14);
+      glow.push(c.pos.x, c.pos.y, c.pos.z, 0, 0, 0, c.color[0], c.color[1], c.color[2], sel ? 1.2 : 0.6, 14 * cs);
       if (c.infall > 0) {
         // Luminous gas stream along the spiral path already travelled.
         const a0 = Math.atan2(c.from.z, c.from.x);
@@ -696,9 +750,9 @@ export class GalaxyPhase extends Phase {
           const rr = r0 * Math.pow(1 - e, 1.3);
           const aa = a0 + e * 2.2;
           const fade = 0.2 + 0.8 * (f / Math.max(now, 1e-3));
-          glow.push(Math.cos(aa) * rr, c.from.y * (1 - e), Math.sin(aa) * rr, 0, 0, 0, c.color[0], c.color[1] * 0.9 + 0.1, c.color[2], fade * 0.7, 10 + (1 - fade) * 8);
+          glow.push(Math.cos(aa) * rr, c.from.y * (1 - e), Math.sin(aa) * rr, 0, 0, 0, c.color[0], c.color[1] * 0.9 + 0.1, c.color[2], fade * 0.7, (10 + (1 - fade) * 8) * cs);
         }
-        glow.push(c.pos.x, c.pos.y, c.pos.z, 0, 0, 0, 1, 0.9, 0.8, 1.2, 22);
+        glow.push(c.pos.x, c.pos.y, c.pos.z, 0, 0, 0, 1, 0.9, 0.8, 1.2, 22 * cs);
       }
     }
     // Supernova flashes
@@ -711,14 +765,14 @@ export class GalaxyPhase extends Phase {
       const p = this.clusterInfall.pos;
       for (let k = 0; k < 30; k++) {
         const a = k * 2.39996;
-        const rr = (k % 5) * 3;
-        glow.push(p.x + Math.cos(a) * rr, p.y, p.z + Math.sin(a) * rr, 0, 0, 0, 1, 0.9, 0.7, 0.8, 5);
+        const rr = (k % 5) * 3 * cs;
+        glow.push(p.x + Math.cos(a) * rr, p.y, p.z + Math.sin(a) * rr, 0, 0, 0, 1, 0.9, 0.7, 0.8, 5 * cs);
       }
-      glow.push(p.x, p.y, p.z, 0, 0, 0, 1, 0.85, 0.6, 0.6, 30);
+      glow.push(p.x, p.y, p.z, 0, 0, 0, 1, 0.85, 0.6, 0.6, 30 * cs);
     }
     // Radio lobes inflated by the jets
-    const L = 700;
-    const lobeS = 60 + this.lobes * 160 + this.frenzy * 20;
+    const L = 700 * this.S;
+    const lobeS = (60 + this.lobes * 160 + this.frenzy * 20) * this.S;
     if (this.lobes > 0.01 || this.frenzy > 0) {
       for (const s of [1, -1]) {
         for (let k = 0; k < 10; k++) {
@@ -734,8 +788,8 @@ export class GalaxyPhase extends Phase {
     const cam = g.camera.position;
     const up = new THREE.Vector3(0, 1, 0);
     const p = Math.max(this.jetPower, this.frenzy > 0 ? 1 : 0);
-    this.jetUp.set(new THREE.Vector3(0, 8, 0), up, L, 18, p * 1.2, this.t, cam);
-    this.jetDown.set(new THREE.Vector3(0, -8, 0), up.clone().negate(), L, 18, p * 1.2, this.t, cam);
+    this.jetUp.set(new THREE.Vector3(0, 8, 0), up, L, 18 * cs, p * 1.2, this.t, cam);
+    this.jetDown.set(new THREE.Vector3(0, -8, 0), up.clone().negate(), L, 18 * cs, p * 1.2, this.t, cam);
 
     const bh = g.pipe.bhPass;
     bh.diskIntensity = damp(bh.diskIntensity, 0.55 + act * 0.8, 2, dt);
@@ -744,7 +798,7 @@ export class GalaxyPhase extends Phase {
 
     if (this.hover && !this.cinematic) {
       this.hoverRing.position.copy(this.hover.pos);
-      this.hoverRing.setWorldRadius(38);
+      this.hoverRing.setWorldRadius(38 * cs);
       this.hoverRing.opacity = 0.7;
     } else this.hoverRing.opacity = 0;
     this.hoverRing.tick(this.t, g.camera);
@@ -762,7 +816,7 @@ export class GalaxyPhase extends Phase {
       }
       const pulse = 0.5 + 0.5 * Math.sin(this.t * 3 + c.th0 * 5);
       ring.position.copy(c.pos);
-      ring.setWorldRadius(34 + pulse * 10);
+      ring.setWorldRadius((34 + pulse * 10) * cs);
       ring.setColor(c === this.hover ? 0xffffff : 0x9fd6ff);
       ring.opacity = c === this.hover ? 1 : 0.35 + pulse * 0.35;
       ring.tick(this.t, g.camera);
@@ -773,6 +827,7 @@ export class GalaxyPhase extends Phase {
 
   private updateHud() {
     const g = this.game;
+    if (this.sb) return this.sb.updateHud({ t: this.t, V: this.V, Q: this.Q, M: this.M, cloudHovered: !!this.hover }, this.jetting, this.cooldown);
     g.hud.setMass(formatSolar(this.M), 'M☉', 'agujero negro supermasivo');
     const obj: Record<GState, [string, number | null]> = {
       reveal: ['', null],
@@ -782,7 +837,7 @@ export class GalaxyPhase extends Phase {
       grow2: [this.Q > 0.75 ? '¡Cuásar al límite! Mantén CLIC DERECHO para liberar energía' : `Canaliza nubes hasta ${formatSolar(GOAL2)} M☉`, clamp(Math.log(this.M / GOAL1) / Math.log(GOAL2 / GOAL1))],
       merger: [this.spin ? 'Pulsa ESPACIO cuando la aguja pase por la zona verde (' + this.spin.aligned + '/3)' : 'Colisión galáctica en curso…', clamp(this.compT / 26)],
       ending: ['Fase de cuásar', null],
-      sandbox: ['Modo libre: tu galaxia sigue viva', null],
+      sandbox: ['', null],
     };
     const [txt, p] = obj[this.state];
     g.hud.setObjective(txt, p);

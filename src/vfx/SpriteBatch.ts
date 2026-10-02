@@ -10,6 +10,7 @@ attribute float iSize;
 uniform float uStretch;
 uniform float uMaxStretch;
 uniform float uSizeScale;
+uniform float uAlpha;
 varying vec2 vUv;
 varying vec4 vColor;
 varying float vStretch;
@@ -24,7 +25,7 @@ void main(){
   mv.xy += dir * position.x * s * st + perp * position.y * s;
   gl_Position = projectionMatrix * mv;
   vUv = position.xy;
-  vColor = iColor;
+  vColor = vec4(iColor.rgb, iColor.a * uAlpha);
   vStretch = st;
 }
 `;
@@ -123,6 +124,7 @@ export class SpriteBatch {
         uStretch: { value: opts.stretch ?? 0.12 },
         uMaxStretch: { value: opts.maxStretch ?? 6 },
         uSizeScale: { value: 1 },
+        uAlpha: { value: 1 },
       },
       transparent: true,
       depthWrite: false,
@@ -153,6 +155,11 @@ export class SpriteBatch {
   }
   set sizeScale(v: number) {
     this.material.uniforms.uSizeScale.value = v;
+  }
+  /** Global opacity multiplier for the whole batch. */
+  set alpha(v: number) {
+    this.material.uniforms.uAlpha.value = v;
+    this.mesh.visible = v > 0.001;
   }
 
   begin() {
