@@ -136,7 +136,7 @@ export class GalaxyPhase extends Phase {
     this.group.add(this.jetUp, this.jetDown);
 
     if (sb) {
-      this.sb = new SandboxMode(g, sb, { gal: this.gal, group: this.group, jets: [this.jetUp, this.jetDown] });
+      this.sb = new SandboxMode(g, sb, { gal: this.gal, group: this.group, jets: [this.jetUp, this.jetDown], setBusy: (v) => (this.cinematic = v) });
       this.S = this.sb.scale;
       this.cloudN = this.sb.cloudCap;
       this.eventT = this.sb.clusterInterval(() => this.rng.next());

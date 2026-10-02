@@ -381,6 +381,7 @@ export class Menus {
               'Los <b>cúmulos globulares</b> que caen hacia el centro también dan ✦: haz clic para acelerarlos.',
               '<b>Tu galaxia crece:</b> lo que inviertes en estrellas y nebulosas sube su <b>nivel</b>: más grande, más estrellas, más zoom (aléjate con la rueda) y +5% de producción por nivel.',
               `Abre la tienda con ${shop}. No te comas todo el gas: con la <b>formación estelar</b> alta produces más.`,
+              `<b>Observatorio</b> (${touch ? 'botón ◎' : 'tecla O'}): seis minijuegos que se desbloquean al crecer, con récords, estrellas ★ y mucho polvo estelar. Cada partida usa una carga de energía ◆ que se recarga sola.`,
             ]
               .map((x) => `<li>${x}</li>`)
               .join(''),

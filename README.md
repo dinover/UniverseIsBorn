@@ -20,6 +20,14 @@ Al terminar el viaje se desbloquea el **modo libre**, accesible desde el menú p
 - Gástalo en la **tienda** (`T`): estrellas especiales que orbitan en tu galaxia (gigantes rojas, púlsares, magnetares, estrellas de Población III…), nebulosas que multiplican tu producción, mejoras y estilos (número de brazos, enrollamiento, paleta, barra central, color de los jets).
 - Lo invertido en estrellas y nebulosas sube el **nivel** de la galaxia: más grande, más estrellas, más zoom (al alejarte aparece la red cósmica) y +5% de producción por nivel.
 - Terminar otra partida de historia recompensa tu galaxia con polvo estelar extra.
+- **Observatorio** (`O`): la cámara mira al cielo sobre tu galaxia, donde brillan tus constelaciones (solo se ven desde ahí). Seis minijuegos que se desbloquean al subir de nivel:
+  - **Lluvia de supernovas**: atrapa cada supernova cuando el anillo la alcanza; combos, doradas que suman tiempo y estrellas estables trampa.
+  - **Memoria estelar**: repite la melodía de las estrellas; cada nivel suma una nota y paga más (desde el 7 las estrellas giran).
+  - **Constelaciones**: encuentra 12 figuras reales entre señuelos y únelas; cada una nueva da +2% de producción para siempre.
+  - **Estrella explosiva**: la cámara vuela hasta una estrella; comprime su núcleo al ritmo de sus latidos de H a Fe hasta que estalle (sin fallos: hipernova).
+  - **Galaxias enanas**: atrae tres galaxias enanas con tu marea pulsando en la zona verde del dial.
+  - **Honda gravitatoria**: lanza cometas, curva su trayectoria con la gravedad y recoge orbes; rozar el agujero negro multiplica.
+- Cada partida usa una carga de energía ◆ (5 máximo, +1 cada 8 minutos y al subir de nivel); sin energía se puede practicar al 20%. Las recompensas escalan con tu producción; hay récords, estrellas ★, logros y estilos exclusivos.
 
 ## Controles
 
@@ -31,6 +39,7 @@ Al terminar el viaje se desbloquea el **modo libre**, accesible desde el menú p
 | Zoom | Rueda del mouse | — |
 | Pausa | Esc | Botón II |
 | Tienda (modo libre) | T | Botón ✦ Tienda |
+| Observatorio (modo libre) | O | Botón ◎ Observatorio |
 
 ## Desarrollo
 

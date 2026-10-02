@@ -9,11 +9,15 @@ import { BAR_COST, JET_OPTIONS, NEBULAE, PALETTES, STARS, TWIST_OPTIONS, astroBy
 import { SandboxEconomy } from './Economy';
 import { MAX_VISIBLE, SandboxDecor } from './Decor';
 import { ShopUi, fmtRate } from './ShopUi';
+import { MINIGAMES, Observatory } from './Observatory';
+import { OBS_ENERGY_MAX } from './Economy';
 
 export interface SandboxHost {
   gal: GalaxyField;
   group: THREE.Group;
   jets: JetBeam[];
+  /** Freezes the galaxy's own gameplay (observatory, minigames). */
+  setBusy: (v: boolean) => void;
 }
 
 /** Per-frame values owned by the galaxy phase. */
@@ -40,6 +44,9 @@ export class SandboxMode {
   private shop: ShopUi;
   private btn: HTMLButtonElement;
   private badge: HTMLElement;
+  private obsBtn: HTMLButtonElement;
+  private obsBadge: HTMLElement;
+  obs: Observatory;
   private S: number;
   private twist: number;
   private bar: number;
@@ -86,9 +93,39 @@ export class SandboxMode {
     });
     this.seenReveal = this.revealSignature();
 
+    this.obsBtn = h('button', 'sb-obsbtn interactive', `<span class="i">◎</span>Observatorio<kbd>O</kbd><em class="badge"></em>`) as HTMLButtonElement;
+    this.obsBadge = this.obsBtn.querySelector('.badge') as HTMLElement;
+    this.obsBtn.addEventListener('click', () => {
+      this.obsBtn.blur();
+      this.openObservatory();
+    });
+    hud.root.appendChild(this.obsBtn);
+    if (!game.prog.tutorialSeen('obs_intro')) this.obsBtn.classList.add('pulse');
+    this.obs = new Observatory({
+      game,
+      eco: this.eco,
+      state,
+      group: host.group,
+      gal: host.gal,
+      scale: () => this.S,
+      view: () => this.viewDistance,
+      time: () => this.t,
+      earn: (a) => this.earn(a),
+      save: () => this.save(),
+      setBusy: (v) => host.setBusy(v),
+      onClosed: () => this.shop.refresh(),
+    });
+
     this.onKey = (e: KeyboardEvent) => {
       if (this.game.mode !== 'playing') return;
       const k = e.key.toLowerCase();
+      if (k === 'o') {
+        if (this.obs.isOpen) {
+          if (this.obs.canLeave) this.obs.close();
+        } else this.openObservatory();
+        return;
+      }
+      if (this.obs.isOpen) return;
       if (k === 't') this.toggleShop();
       else if (k === 'escape' && this.shop.isOpen) {
         // Esc closes the shop first instead of pausing.
@@ -182,6 +219,13 @@ export class SandboxMode {
     return a + (b - a) * rng();
   }
 
+  private openObservatory() {
+    this.obsBtn.classList.remove('pulse');
+    this.toggleShop(false);
+    this.game.hud.clearHint();
+    this.obs.open();
+  }
+
   // ------------------------------------------------------------------ shop actions
   private toggleShop(v = !this.shop.isOpen) {
     if (v === this.shop.isOpen) return;
@@ -269,6 +313,7 @@ export class SandboxMode {
   private checkLevel() {
     const L = this.eco.level;
     if (L <= this.level) return;
+    const prev = this.level;
     this.level = L;
     const g = this.game;
     const bonus = Math.round((this.eco.scale - 1) * 100);
@@ -277,7 +322,12 @@ export class SandboxMode {
     g.pipe.bloomBoost = 1.2;
     g.audio.swell(4);
     g.rig.maxZoom = this.eco.zoomLimit;
-    g.rig.animate({ distance: this.viewDistance }, 4);
+    if (!this.obs.isOpen) g.rig.animate({ distance: this.viewDistance }, 4);
+    // Growing also refreshes your observing energy and may open a new minigame.
+    this.obs.addEnergy(1);
+    const fresh = MINIGAMES.filter((m) => m.level > prev && m.level <= L);
+    for (const m of fresh) g.hud.toast(m.icon, `Nuevo minijuego: ${m.name}`, 'Te espera en el Observatorio (O)');
+    if (fresh.length) this.obsBtn.classList.add('pulse');
     if (L >= 10) g.prog.achieve('sb_level10');
     if (L >= 20) g.prog.achieve('sb_level20');
   }
@@ -315,7 +365,8 @@ export class SandboxMode {
     const view = SANDBOX_VIEW * Math.pow(this.S, 0.9);
     const sz = 1.25 * Math.sqrt(this.S) * Math.max(1, Math.sqrt(g.rig.effectiveDistance / view));
     this.decor.render(gal, snap.t, (id) => this.eco.count(id), sz);
-    this.hoverLabel(snap.cloudHovered);
+    if (this.obs.isOpen) this.obs.update(dt);
+    else this.hoverLabel(snap.cloudHovered);
 
     // Jets pay out continuously: summarise it once a second near the jet.
     this.ventT -= dt;
@@ -365,6 +416,10 @@ export class SandboxMode {
     for (const d of [...STARS, ...NEBULAE]) if (e.revealed(d) && !e.isMaxed(d) && e.costOf(d) <= e.s.dust) n++;
     this.badge.textContent = n ? String(n) : '';
     this.badge.style.display = n ? '' : 'none';
+    const en = this.obs.energy;
+    const txt = `◆${en}`;
+    if (this.obsBadge.textContent !== txt) this.obsBadge.textContent = txt;
+    this.obsBtn.classList.toggle('full', en >= OBS_ENERGY_MAX);
     if (!this.shop.isOpen && this.revealSignature() !== this.seenReveal) this.btn.classList.add('pulse');
   }
 
@@ -415,6 +470,8 @@ export class SandboxMode {
     this.save();
     window.removeEventListener('keydown', this.onKey, true);
     window.removeEventListener('pagehide', this.onHide);
+    this.obs.dispose();
+    this.obsBtn.remove();
     this.btn.remove();
     this.shop.dispose();
     this.decor.dispose();

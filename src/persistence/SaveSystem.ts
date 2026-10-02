@@ -88,6 +88,17 @@ export interface SandboxLook {
   jets: string;
 }
 
+/** Observatory (free-mode minigames): energy, records and the constellation collection. */
+export interface ObsState {
+  energy: number;
+  /** Timestamp of the last energy tick (energy regenerates over real time). */
+  at: number;
+  best: Record<string, number>;
+  stars: Record<string, number>;
+  plays: Record<string, number>;
+  constellations: string[];
+}
+
 /** Free mode ("modo libre"): a persistent galaxy, independent from story runs. */
 export interface SandboxState {
   version: 1;
@@ -104,6 +115,8 @@ export interface SandboxState {
   base: { arms: number; twist: number; ecc: number; bulge: number; hueShift: number };
   time: number;
   savedAt: number;
+  /** Added with the observatory; older saves get it on load. */
+  obs?: ObsState;
 }
 
 export interface MetaState {

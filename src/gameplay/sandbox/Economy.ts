@@ -1,4 +1,4 @@
-import type { SandboxState } from '../../persistence/SaveSystem';
+import type { ObsState, SandboxState } from '../../persistence/SaveSystem';
 import type { Rng } from '../../procgen/rng';
 import {
   NEBULAE,
@@ -32,7 +32,22 @@ export function createSandboxState(seed: number, mass: number, base: SandboxStat
     base,
     time: 0,
     savedAt: Date.now(),
+    obs: freshObs(),
   };
+}
+
+export const OBS_ENERGY_MAX = 5;
+/** Real-time seconds to regain one observatory energy. */
+export const OBS_ENERGY_EVERY = 8 * 60;
+/** Permanent production bonus per completed constellation. */
+export const CONSTELLATION_BONUS = 0.02;
+
+const freshObs = (): ObsState => ({ energy: OBS_ENERGY_MAX, at: Date.now(), best: {}, stars: {}, plays: {}, constellations: [] });
+
+/** The observatory block of a save, created on demand for saves older than the observatory. */
+export function obsOf(s: SandboxState): ObsState {
+  if (!s.obs) s.obs = freshObs();
+  return s.obs;
 }
 
 /** Galaxy shape for a free mode that does not come straight from a finished story. */
@@ -94,7 +109,7 @@ export class SandboxEconomy {
   get production() {
     let p = 1; // the galaxy itself always shines a little
     for (const s of STARS) p += this.count(s.id) * (s.prod ?? 0);
-    return p * this.nebulaBoost * levelBonus(this.level) * (1 + 0.2 * this.up('halo'));
+    return p * this.nebulaBoost * levelBonus(this.level) * (1 + 0.2 * this.up('halo')) * (1 + CONSTELLATION_BONUS * obsOf(this.s).constellations.length);
   }
 
   /** Actual income: a galaxy that still forms stars (vitality V) shines brighter. */

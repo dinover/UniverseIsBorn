@@ -80,6 +80,8 @@ export interface LookOption {
   name: string;
   cost: number;
   swatch?: string;
+  /** Observatory exclusive: how to unlock it (cannot be bought). */
+  lock?: string;
 }
 
 export const ARM_OPTIONS: LookOption[] = [
@@ -103,6 +105,7 @@ export const PALETTES: (LookOption & { tint: [number, number, number] })[] = [
   { id: 'aurora', name: 'Aurora', cost: 15000, tint: [0.66, 1.16, 0.86], swatch: 'linear-gradient(135deg,#7dffb2,#4fbfff)' },
   { id: 'rosa', name: 'Rosa cósmica', cost: 15000, tint: [1.22, 0.74, 1.04], swatch: 'linear-gradient(135deg,#ff9ad0,#b47bff)' },
   { id: 'violeta', name: 'Violeta profundo', cost: 150000, tint: [0.92, 0.68, 1.32], swatch: 'linear-gradient(135deg,#c49bff,#5f4bff)' },
+  { id: 'estelar', name: 'Cartógrafo', cost: 0, tint: [1.12, 1.04, 0.82], swatch: 'linear-gradient(135deg,#fff6d0,#ffd36b 50%,#7fd4ff)', lock: 'Observatorio: 6 constelaciones' },
 ];
 
 export const JET_OPTIONS: (LookOption & { a: number; b: number })[] = [
@@ -110,6 +113,7 @@ export const JET_OPTIONS: (LookOption & { a: number; b: number })[] = [
   { id: 'dorado', name: 'Dorado', cost: 4000, a: 0xfff0c0, b: 0xffa040, swatch: 'linear-gradient(135deg,#fff0c0,#ffa040)' },
   { id: 'esmeralda', name: 'Esmeralda', cost: 4000, a: 0xd0ffe8, b: 0x30d090, swatch: 'linear-gradient(135deg,#d0ffe8,#30d090)' },
   { id: 'carmesi', name: 'Carmesí', cost: 40000, a: 0xffd6d0, b: 0xff3050, swatch: 'linear-gradient(135deg,#ffd6d0,#ff3050)' },
+  { id: 'hipernova', name: 'Hipernova', cost: 0, a: 0xffffff, b: 0xff7a1a, swatch: 'linear-gradient(135deg,#ffffff,#ffb040 45%,#ff3a6a)', lock: 'Observatorio: hipernova' },
 ];
 
 export const BAR_COST = 25000;

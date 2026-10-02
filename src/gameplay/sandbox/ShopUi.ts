@@ -143,9 +143,10 @@ export class ShopUi {
   private chips(kind: LookKind, opts: LookOption[], current: string) {
     return opts
       .map((o) => {
-        const owned = o.cost === 0 || !!this.eco.s.unlocked[lookKey(kind, o.id)];
+        const owned = !!this.eco.s.unlocked[lookKey(kind, o.id)] || (o.cost === 0 && !o.lock);
         const on = o.id === current;
         const sw = o.swatch ? `<i class="sw" style="background:${o.swatch}"></i>` : '';
+        if (o.lock && !owned) return `<button class="chip locked" data-locked="1" disabled title="${o.lock}">${sw}<b>${o.name}</b><small>🔒 ${o.lock.replace('Observatorio: ', '')}</small></button>`;
         const tag = on ? '✓' : owned ? 'Usar' : `${formatBig(o.cost)} ✦`;
         return `<button class="chip${on ? ' on' : ''}${owned ? ' owned' : ''}" data-kind="${kind}" data-id="${o.id}" data-cost="${owned ? 0 : o.cost}">${sw}<b>${o.name}</b><small>${tag}</small></button>`;
       })
@@ -252,7 +253,7 @@ export class ShopUi {
       (b.querySelector('.eta') as HTMLElement).textContent = b.disabled ? this.eta(cost) : '';
     });
     this.list.querySelectorAll<HTMLButtonElement>('button.chip').forEach((b) => {
-      b.disabled = Number(b.dataset.cost) > dust;
+      b.disabled = b.dataset.locked === '1' || Number(b.dataset.cost) > dust;
     });
   }
 
