@@ -45,7 +45,8 @@ vec3 orbitPos(vec4 o){
   float rr = a * uR;
   float omega = uVel / (rr + uR * 0.06);
   float th = o.y + uTime * omega;
-  float phi = log(a + 0.03) * uTwist + uTime * uPattern - uDark * 0.22;
+  // Trailing arms: the outer tips lag behind the rotation (minus sign), like real spirals.
+  float phi = -log(a + 0.03) * uTwist + uTime * uPattern - uDark * 0.22;
   float e = uEcc * smoothstep(0.06, 0.3, a) * step(0.5, o.w);
   float r = rr * (1.0 + e * cos(uArms * (th - phi)));
   float thick = mix(0.32, 0.035, smoothstep(0.0, 0.22, a)) * uR * (o.w < 0.5 ? 1.0 : 0.55);
@@ -53,7 +54,7 @@ vec3 orbitPos(vec4 o){
   if (uBar > 0.0){
     // Barred spiral: the inner orbits stretch along a slowly rotating bar.
     float k = uBar * (1.0 - smoothstep(0.06, 0.38, a));
-    float ba = log(0.38) * uTwist + uTime * uPattern;
+    float ba = -log(0.38) * uTwist + uTime * uPattern;
     float c = cos(ba);
     float s = sin(ba);
     vec2 q = vec2(c * p.x + s * p.z, -s * p.x + c * p.z);
@@ -231,14 +232,14 @@ export class GalaxyField extends THREE.Group {
     const rr = a * p.radius;
     const omega = p.vel / (rr + p.radius * 0.06);
     const th = th0 + time * omega;
-    const phi = Math.log(a + 0.03) * p.twist + time * p.pattern;
+    const phi = -Math.log(a + 0.03) * p.twist + time * p.pattern;
     const e = p.ecc * Math.min(1, Math.max(0, (a - 0.06) / 0.24));
     const r = rr * (1 + e * Math.cos(p.arms * (th - phi)));
     const thick = 0.035 * p.radius * 0.55;
     out.set(Math.cos(th) * r, height * thick, Math.sin(th) * r);
     if (this.bar > 0) {
       const k = this.bar * (1 - smoothstep(0.06, 0.38, a));
-      const ba = Math.log(0.38) * p.twist + time * p.pattern;
+      const ba = -Math.log(0.38) * p.twist + time * p.pattern;
       const c = Math.cos(ba);
       const s = Math.sin(ba);
       const qx = (c * out.x + s * out.z) * (1 + 1.1 * k);

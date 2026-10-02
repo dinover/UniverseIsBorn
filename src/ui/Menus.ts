@@ -13,6 +13,7 @@ export interface MenuCallbacks {
   onNewGame(): void;
   onContinue(): void;
   onSandbox(): void;
+  onPomodoro(): void;
   onResume(): void;
   onQuitToTitle(): void;
   onSettings(s: Settings): void;
@@ -48,6 +49,7 @@ export class Menus {
     });
     this.sandboxBtn = this.button(menu, 'Modo libre', '', () => cb.onSandbox());
     this.sandboxSub = this.sandboxBtn.querySelector('small') as HTMLElement;
+    this.button(menu, 'Modo Pomodoro', 'Relax y estudio: un viaje cósmico con temporizador', () => cb.onPomodoro());
     this.button(menu, 'Códice', 'Ciencia detrás de cada etapa', () => this.openCodex());
     this.button(menu, 'Logros', 'Y estadísticas', () => this.openAchievements());
     this.button(menu, 'Opciones', '', () => this.openOptions());
@@ -323,6 +325,8 @@ export class Menus {
         ['Tiempo con jets', formatTime(st.jetSeconds)],
         ['Universos completados', formatBig(st.runsCompleted)],
         ['Polvo estelar generado', formatBig(st.stardust)],
+        ['Pomodoros completados', formatBig(st.pomodoros)],
+        ['Minutos de foco', formatBig(st.focusMinutes)],
       ];
       stats.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
       p.appendChild(stats);

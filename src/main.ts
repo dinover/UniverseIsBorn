@@ -9,6 +9,7 @@ import { SupernovaPhase } from './gameplay/phases/SupernovaPhase';
 import { NeutronPhase } from './gameplay/phases/NeutronPhase';
 import { BlackHolePhase } from './gameplay/phases/BlackHolePhase';
 import { GalaxyPhase } from './gameplay/phases/GalaxyPhase';
+import { PomodoroPhase } from './gameplay/phases/PomodoroPhase';
 
 function webglAvailable() {
   try {
@@ -36,6 +37,7 @@ function boot() {
   game.register('blackhole', (g, c) => new BlackHolePhase(g, c));
   game.register('galaxy', (g, c) => new GalaxyPhase(g, c));
   game.register('sandbox', (g, c) => new GalaxyPhase(g, c, true));
+  game.register('pomodoro', (g, c) => new PomodoroPhase(g, c));
   game.start();
   setTimeout(() => bootEl.classList.add('hide'), 400);
 }

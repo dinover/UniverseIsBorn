@@ -21,7 +21,7 @@ import type { GalaxyParams } from '../vfx/GalaxyField';
 
 export type PhaseFactory = (game: Game, carry: RunCarry) => Phase;
 /** Everything that can own the scene: story phases, the title backdrop and free mode. */
-export type SceneId = PhaseId | 'title' | 'sandbox';
+export type SceneId = PhaseId | 'title' | 'sandbox' | 'pomodoro';
 
 type Mode = 'title' | 'playing' | 'paused' | 'transition';
 
@@ -85,6 +85,7 @@ export class Game {
       onNewGame: () => this.newGame(),
       onContinue: () => this.continueGame(),
       onSandbox: () => this.startSandbox(),
+      onPomodoro: () => this.startPomodoro(),
       onResume: () => this.resume(),
       onQuitToTitle: () => this.quitToTitle(),
       onSettings: (s) => this.applySettings(s),
@@ -109,7 +110,7 @@ export class Game {
     this.wireEvents();
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.mode === 'playing') this.pause();
+      if (document.hidden && this.mode === 'playing' && !this.phase?.allowBackground) this.pause();
     });
     if (this.debug) this.installDebug();
   }
@@ -156,13 +157,18 @@ export class Game {
   start() {
     const params = new URLSearchParams(location.search);
     const jump = params.get('phase') as SceneId | null;
-    if (this.debug && jump === 'sandbox') {
+    if (this.debug && jump === 'pomodoro') {
+      this.prog.run = null;
+      this.menus.showTitle(false);
+      this.mode = 'playing';
+      this.switchPhase('pomodoro', {});
+    } else if (this.debug && jump === 'sandbox') {
       this.ensureSandbox();
       this.prog.run = null;
       this.menus.showTitle(false);
       this.mode = 'playing';
       this.switchPhase('sandbox', {});
-    } else if (this.debug && jump && jump !== 'title' && jump !== 'sandbox' && this.factories.has(jump)) {
+    } else if (this.debug && jump && jump !== 'title' && jump !== 'sandbox' && jump !== 'pomodoro' && this.factories.has(jump)) {
       const seed = randomSeed();
       this.rng = new Rng(seed);
       const carry: RunCarry = { cloudMass: 4000, starMass: 24, coreQuality: 0.8, remnant: 'bh', bhMass: Number(params.get('mass') ?? 6) };
@@ -234,6 +240,14 @@ export class Game {
     this.beginPlay('sandbox', {});
   }
 
+  /** Pomodoro (relax & study): a cosmic journey with a focus timer. Never touches runs or saves. */
+  startPomodoro() {
+    this.prog.saveRunNow();
+    this.audio.suspend(false);
+    this.prog.run = null;
+    this.beginPlay('pomodoro', {});
+  }
+
   /** End of the story: creates the free-mode galaxy, or rewards the existing one. */
   completeStory(mass: number, p: GalaxyParams): { created: boolean; bonus: number } {
     const s = this.prog.loadSandbox();
@@ -259,8 +273,9 @@ export class Game {
     await this.fadeTo(1, 0.9);
     this.switchPhase(id, carry);
     this.mode = 'playing';
-    this.hud.show(true);
-    this.touch.setEnabled(this.input.touchMode);
+    const hud = this.phase?.showHud ?? true;
+    this.hud.show(hud);
+    this.touch.setEnabled(this.input.touchMode && hud);
     await this.fadeTo(0, 1.4);
   }
 
@@ -301,7 +316,7 @@ export class Game {
     this.pipe.exposure = 1;
     this.rig.autoOrbit = 0;
     this.rig.zoomBias = 1;
-    const galaxy = id === 'galaxy' || id === 'sandbox';
+    const galaxy = id === 'galaxy' || id === 'sandbox' || id === 'pomodoro';
     this.rig.minZoom = galaxy ? 0.08 : 0.6;
     this.rig.maxZoom = galaxy ? 2.2 : 1.8;
     this.rig.offset.set(0, 0, 0);
