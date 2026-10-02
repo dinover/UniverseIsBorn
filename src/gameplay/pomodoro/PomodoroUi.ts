@@ -43,7 +43,7 @@ export class PomodoroUi {
     this.root = h('div', 'pomo');
     this.setupEl = h('div', 'pomo-setup panel interactive');
     this.timerEl = h('div', 'pomo-timer');
-    this.timerEl.innerHTML = `<div class="l"></div><div class="t">25:00</div><div class="bar"><i></i></div><div class="dots"></div>`;
+    this.timerEl.innerHTML = `<div class="l"></div><div class="t">25:00</div><div class="bar"><i></i></div><div class="dots"></div><div class="g"></div>`;
     this.ctrlEl = h('div', 'pomo-ctrl interactive');
     this.skipEl = h('button', 'pomo-skip btn small', 'Saltar intro ⏭');
     this.skipEl.addEventListener('click', () => {
@@ -183,6 +183,12 @@ export class PomodoroUi {
         else this.act.exit();
       }),
     );
+  }
+
+  /** The small line under the timer about your evolving galaxy. */
+  setGalaxy(text: string) {
+    const el = this.timerEl.querySelector('.g') as HTMLElement;
+    if (el.textContent !== text) el.textContent = text;
   }
 
   /** Forces the controls to be rebuilt (after settings or state changes). */

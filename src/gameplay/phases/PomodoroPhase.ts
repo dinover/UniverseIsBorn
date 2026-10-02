@@ -1,7 +1,7 @@
 import { Phase } from '../Phase';
-import { GalaxyField } from '../../vfx/GalaxyField';
 import { SKY_PRESETS } from '../../vfx/Sky';
-import { Rng, randomSeed } from '../../procgen/rng';
+import { randomSeed } from '../../procgen/rng';
+import { LivingGalaxy } from '../pomodoro/LivingGalaxy';
 import { IntroCinematic } from '../pomodoro/IntroCinematic';
 import { Director } from '../pomodoro/Director';
 import { PomodoroUi } from '../pomodoro/PomodoroUi';
@@ -25,7 +25,7 @@ export class PomodoroPhase extends Phase {
   id = 'galaxy' as const;
   showHud = false;
   allowBackground = true;
-  private gal!: GalaxyField;
+  private living!: LivingGalaxy;
   private intro: IntroCinematic | null = null;
   private director!: Director;
   private ui!: PomodoroUi;
@@ -41,25 +41,10 @@ export class PomodoroPhase extends Phase {
     g.hud.show(false);
     g.audio.setEra('primordial');
     g.audio.setIntensity(0.25);
-    const rng = new Rng(randomSeed());
-    this.gal = new GalaxyField(
-      {
-        count: g.quality.profile.galaxyStars,
-        radius: 600,
-        arms: rng.pick([2, 2, 3, 4]),
-        twist: rng.range(1.6, 2.2),
-        ecc: rng.range(0.38, 0.45),
-        pattern: 0.012,
-        vel: 42,
-        bulge: rng.range(0.13, 0.18),
-        hueShift: rng.range(-0.5, 0.5),
-      },
-      rng,
-    );
-    this.group.add(this.gal);
+    this.living = new LivingGalaxy(g, this.group, randomSeed());
     this.save = loadPomo();
     this.timer = new PomodoroTimer(this.save.settings);
-    this.director = new Director(g, this.group, this.gal);
+    this.director = new Director(g, this.group, () => this.living.main);
     this.ui = new PomodoroUi(
       g.hud.root.parentElement!,
       this.save,
@@ -80,7 +65,7 @@ export class PomodoroPhase extends Phase {
       },
       () => g.prog.meta.settings,
     );
-    this.intro = new IntroCinematic(g, this.group, this.gal);
+    this.intro = new IntroCinematic(g, this.group, this.living);
     this.ui.setMode('intro');
 
     // Wall-clock check, also while the tab is hidden (the music keeps timers alive).
@@ -197,9 +182,24 @@ export class PomodoroPhase extends Phase {
     this.game.hud.titleCard(big, `${min} MINUTOS`, sub, 4);
   }
 
+  /** How the galaxy should look now: one more arm per pomodoro, maturing during each focus. */
+  private evolve(dt: number) {
+    const tm = this.timer;
+    const run = this.mode === 'run';
+    if (run) this.living.setArms(Math.min(6, 2 + tm.index), tm.kind === 'focus' && tm.index === 1 && this.living.arms > 3);
+    else this.living.setArms(4);
+    const p = run && tm.kind === 'focus' ? tm.progress() : 1;
+    this.living.dim = this.intro ? 1 : this.director.dim;
+    this.living.update(dt, this.t, p, run && tm.kind !== 'focus');
+    if (run) {
+      const arms = this.living.arms;
+      this.ui.setGalaxy(tm.kind === 'focus' ? `✦ Tu galaxia: ${arms} brazos · madurando ${Math.floor(p * 100)}%` : `✦ Tu galaxia: ${arms} brazos · en calma`);
+    }
+  }
+
   update(dt: number) {
     const g = this.game;
-    this.gal.update(this.t, g.pipe.renderer.getPixelRatio());
+    this.evolve(dt);
     if (this.intro) {
       this.intro.update(dt);
       if (this.intro.done) {
@@ -221,7 +221,7 @@ export class PomodoroPhase extends Phase {
     this.intro?.dispose();
     this.director.dispose();
     this.ui.dispose();
-    this.gal.dispose();
+    this.living.dispose();
     this.game.rig.target.set(0, 0, 0);
     super.exit();
   }

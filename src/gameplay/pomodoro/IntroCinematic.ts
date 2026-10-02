@@ -3,7 +3,6 @@ import type { Game } from '../../core/Game';
 import { SpriteBatch } from '../../vfx/SpriteBatch';
 import { StarBody, type StarLook } from '../../vfx/StarBody';
 import { JetBeam } from '../../vfx/Effects';
-import type { GalaxyField } from '../../vfx/GalaxyField';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { TAU, clamp, damp, easeInExpo, easeInOut, easeOutCubic } from '../../utils/math';
 
@@ -73,7 +72,8 @@ export class IntroCinematic {
   private col = new THREE.Color(1, 0.8, 0.6);
   private boomT = -1;
 
-  constructor(private game: Game, private group: THREE.Group, private gal: GalaxyField) {
+  /** `gal`: anything with a fade (the pomodoro's living galaxy). */
+  constructor(private game: Game, private group: THREE.Group, private gal: { fade: number }) {
     const q = game.quality.profile.particles;
     this.n = Math.floor(2600 * q + 700);
     this.pos = new Float32Array(this.n * 3);
