@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { PhaseId, RunCarry } from '../persistence/SaveSystem';
 import type { AbilitySpec } from '../ui/Hud';
+import { tr } from '../i18n/i18n';
 
 /**
  * Base class for a gameplay phase (one or several evolutionary stages).
@@ -39,6 +40,9 @@ export abstract class Phase {
   help(): boolean {
     return false;
   }
+
+  /** Optional: rebuild any text the phase built once, after the player switches language. */
+  onLanguage(): void {}
 
   /** Primary/secondary labels for touch buttons. */
   touchLabels(): [string | null, string | null] {
@@ -101,7 +105,7 @@ export abstract class Phase {
   }
 
   keyLabel(primary: boolean) {
-    if (this.game.input.touchMode) return primary ? 'BOTÓN' : 'BOTÓN 2';
-    return primary ? 'CLIC' : 'CLIC DER';
+    if (this.game.input.touchMode) return primary ? tr('BOTÓN', 'BUTTON') : tr('BOTÓN 2', 'BUTTON 2');
+    return primary ? tr('CLIC', 'CLICK') : tr('CLIC DER', 'R-CLICK');
   }
 }

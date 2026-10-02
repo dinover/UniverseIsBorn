@@ -1,3 +1,4 @@
+import type { Bi } from '../i18n/i18n';
 import type { Rng } from '../procgen/rng';
 
 export type BodyKind = 'gas' | 'dust' | 'star' | 'wd' | 'ns' | 'bh' | 'cluster' | 'nebula';
@@ -35,15 +36,15 @@ export interface BodyTemplate {
 }
 
 /** Visual/gameplay descriptions of each growth source (risk / reward). */
-export const KIND_INFO: Record<BodyKind, { label: string; massFrac: [number, number]; risk: string }> = {
-  gas: { label: 'Nube de gas', massFrac: [0.03, 0.06], risk: 'Fácil de capturar, alimenta el disco poco a poco.' },
-  dust: { label: 'Polvo', massFrac: [0.01, 0.025], risk: 'Poco valor, pero te frena.' },
-  star: { label: 'Estrella', massFrac: [0.08, 0.16], risk: 'Mucha masa, pero se destroza: la mitad sale despedida.' },
-  wd: { label: 'Enana blanca', massFrac: [0.03, 0.05], risk: 'Compacta y rápida: difícil de atrapar, cae entera.' },
-  ns: { label: 'Estrella de neutrones', massFrac: [0.04, 0.07], risk: 'Su púlsar drena tu energía si te toca el haz.' },
-  bh: { label: 'Agujero negro', massFrac: [0.3, 0.9], risk: 'Fusión: enorme recompensa... o te devora si es mayor.' },
-  cluster: { label: 'Cúmulo estelar', massFrac: [0.35, 0.8], risk: 'Cientos de estrellas: desármalo con tu marea.' },
-  nebula: { label: 'Nebulosa', massFrac: [0.25, 0.5], risk: 'Gas abundante que forma estrellas nuevas.' },
+export const KIND_INFO: Record<BodyKind, { label: Bi; massFrac: [number, number]; risk: Bi }> = {
+  gas: { label: { es: 'Nube de gas', en: 'Gas cloud' }, massFrac: [0.03, 0.06], risk: { es: 'Fácil de capturar; alimenta el disco poco a poco.', en: 'Easy to capture; feeds the disk little by little.' } },
+  dust: { label: { es: 'Polvo', en: 'Dust' }, massFrac: [0.01, 0.025], risk: { es: 'Aporta poco y te frena.', en: 'Adds little and slows you down.' } },
+  star: { label: { es: 'Estrella', en: 'Star' }, massFrac: [0.08, 0.16], risk: { es: 'Mucha masa, aunque se deshace y la mitad sale despedida.', en: 'Lots of mass, though it comes apart and half is flung away.' } },
+  wd: { label: { es: 'Enana blanca', en: 'White dwarf' }, massFrac: [0.03, 0.05], risk: { es: 'Compacta y rápida: difícil de atrapar, pero cae entera.', en: 'Compact and fast: hard to catch, but falls in whole.' } },
+  ns: { label: { es: 'Estrella de neutrones', en: 'Neutron star' }, massFrac: [0.04, 0.07], risk: { es: 'El haz de su púlsar agota tu energía si te alcanza.', en: 'Its pulsar beam drains your energy if it reaches you.' } },
+  bh: { label: { es: 'Agujero negro', en: 'Black hole' }, massFrac: [0.3, 0.9], risk: { es: 'Fusionarse aporta muchísimo, pero si es más grande, te alcanzará a ti.', en: 'Merging gives a lot, but if it is larger, it will draw you in.' } },
+  cluster: { label: { es: 'Cúmulo estelar', en: 'Star cluster' }, massFrac: [0.35, 0.8], risk: { es: 'Cientos de estrellas que tu marea deshace poco a poco.', en: 'Hundreds of stars that your tide slowly unravels.' } },
+  nebula: { label: { es: 'Nebulosa', en: 'Nebula' }, massFrac: [0.25, 0.5], risk: { es: 'Gas abundante donde nacen estrellas nuevas.', en: 'Plentiful gas where new stars are born.' } },
 };
 
 const STAR_COLORS: [number, number, number][] = [

@@ -108,6 +108,10 @@ html, body {
 #title .sub { color: var(--dim); max-width: 460px; margin: 18px 0 38px; line-height: 1.6; font-size: 15px; }
 #title .menu { display: flex; flex-direction: column; gap: 6px; }
 #title .foot { position: absolute; bottom: 22px; left: 8vw; right: 8vw; display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; }
+#title .lang-switch { position: absolute; top: 22px; right: 26px; display: flex; border: 1px solid var(--line); background: var(--glass-soft); }
+#title .lang-switch button { background: transparent; color: var(--dim); border: 0; padding: 7px 12px; font-family: var(--font-display); letter-spacing: 0.2em; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+#title .lang-switch button:hover { color: var(--text); }
+#title .lang-switch button.on { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
 
 /* ------------------------------------------------------------------ overlay screens */
 .screen {

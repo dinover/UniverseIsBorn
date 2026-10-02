@@ -5,6 +5,7 @@ import { JetBeam } from '../../vfx/Effects';
 import { StarBody } from '../../vfx/StarBody';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, easeInExpo, easeOutCubic } from '../../utils/math';
+import { num, tr } from '../../i18n/i18n';
 
 /** Remnant mass model (simplified): heavier stars and better-resisted cores leave heavier remnants. */
 export function remnantMass(starMass: number, coreQuality: number) {
@@ -146,12 +147,19 @@ export class SupernovaPhase extends Phase {
     g.pipe.final.shockwave(new THREE.Vector3(), 1.0, 2.6, 1.4);
     await this.wait(0.45);
     g.timeScale = 1;
-    g.hud.titleCard('Supernova', 'TODO COLAPSÓ', 'Por unas semanas brillarás más que toda tu galaxia', 4.5);
+    g.hud.titleCard('Supernova', tr('UN ÚLTIMO DESTELLO', 'ONE LAST BURST OF LIGHT'), tr('Durante unas semanas brillarás más que toda tu galaxia', 'For a few weeks you will outshine your entire galaxy'), 4.5);
     g.sky.set(SKY_PRESETS.remnant, 5);
     await this.wait(5);
     // 4. Remnant
     const isBH = this.remnant === 'bh';
-    g.hud.titleCard(isBH ? 'Agujero negro' : 'Estrella de neutrones', 'EL REMANENTE', `${this.mass.toFixed(2)} masas solares ${isBH ? 'más allá del límite de Tolman-Oppenheimer-Volkoff' : 'comprimidas en 20 km'}`, 5);
+    g.hud.titleCard(
+      isBH ? tr('Agujero negro', 'Black hole') : tr('Estrella de neutrones', 'Neutron star'),
+      tr('LO QUE QUEDA', 'WHAT REMAINS'),
+      isBH
+        ? tr(`${num(this.mass, 2)} masas solares, más allá del límite de Tolman-Oppenheimer-Volkoff`, `${num(this.mass, 2)} solar masses, beyond the Tolman-Oppenheimer-Volkoff limit`)
+        : tr(`${num(this.mass, 2)} masas solares comprimidas en 20 km`, `${num(this.mass, 2)} solar masses squeezed into 20 km`),
+      5,
+    );
     if (isBH) g.prog.achieve('direct_collapse');
     else g.prog.discover('neutronstar');
     g.rig.animate({ distance: isBH ? 36 : 40, pitch: isBH ? 0.14 : 0.3 }, 4.5);

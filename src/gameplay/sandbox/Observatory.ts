@@ -14,6 +14,7 @@ import { StarBurst } from './minigames/StarBurst';
 import { DwarfMerger } from './minigames/DwarfMerger';
 import { Slingshot } from './minigames/Slingshot';
 import { CONSTELLATIONS, drawFigure, placeFigure } from './minigames/constellations';
+import { int, tr, withText, type Bi } from '../../i18n/i18n';
 
 export interface MinigameDef {
   id: string;
@@ -30,15 +31,66 @@ export interface MinigameDef {
   best: (v: number) => string;
 }
 
-const pts = (v: number) => `${Math.round(v).toLocaleString('es')} pts`;
+const pts = (v: number) => `${int(v)} pts`;
+
+type GameBase = Omit<MinigameDef, 'name' | 'short' | 'desc'>;
+const game = (b: GameBase, name: Bi, short: Bi, desc: Bi): MinigameDef => withText(b, { name, short, desc });
 
 export const MINIGAMES: MinigameDef[] = [
-  { id: 'hunt', name: 'Lluvia de supernovas', icon: '✸', level: 1, scene: 'galaxy', short: 'Atrapa supernovas justo al estallar. Combos, doradas y trampas.', desc: 'Atrapa cada supernova justo cuando estalla. Encadena combos, caza las doradas y no toques las estrellas estables.', make: (c) => new SupernovaHunt(c), best: pts },
-  { id: 'memory', name: 'Memoria estelar', icon: '♫', level: 2, scene: 'galaxy', short: 'Repite la melodía de las estrellas. Cada nivel paga más.', desc: 'Las estrellas cantan una melodía: repítela. Cada nivel suma una nota y paga más que el anterior.', make: (c) => new StarMemory(c), best: (v) => `nivel ${v}` },
-  { id: 'constellations', name: 'Constelaciones', icon: '✧', level: 3, scene: 'sky', short: 'Dibuja constelaciones en tu cielo: +2% de producción cada una.', desc: 'Encuentra figuras escondidas en el cielo y une sus estrellas. Cada constelación nueva queda en tu cielo y da +2% de producción para siempre.', make: (c) => new ConstellationGame(c), best: pts },
-  { id: 'burst', name: 'Estrella explosiva', icon: '✺', level: 4, scene: 'galaxy', short: 'Comprime un núcleo al ritmo de sus latidos hasta que estalle.', desc: 'Vuela hasta una estrella y comprime su núcleo al ritmo de sus latidos, del hidrógeno al hierro… hasta que estalle.', make: (c) => new StarBurst(c), best: pts },
-  { id: 'dwarf', name: 'Galaxias enanas', icon: '◉', level: 6, scene: 'galaxy', short: 'Atrae tres galaxias enanas con tu marea gravitatoria.', desc: 'Tres galaxias enanas caen hacia la tuya. Atráelas con tu marea pulsando cuando la aguja cruce la zona verde.', make: (c) => new DwarfMerger(c), best: pts },
-  { id: 'sling', name: 'Honda gravitatoria', icon: '☄', level: 8, scene: 'galaxy', short: 'Lanza cometas y curva su camino con la gravedad.', desc: 'Lanza cometas y deja que la gravedad curve su camino para recoger polvo estelar. Rozar el agujero negro multiplica.', make: (c) => new Slingshot(c), best: pts },
+  game(
+    { id: 'hunt', icon: '✸', level: 1, scene: 'galaxy', make: (c) => new SupernovaHunt(c), best: pts },
+    { es: 'Lluvia de supernovas', en: 'Supernova Shower' },
+    { es: 'Atrapa supernovas justo cuando estallan. Combos, doradas y trampas.', en: 'Catch supernovae right as they burst. Combos, golden ones and decoys.' },
+    {
+      es: 'Atrapa cada supernova justo cuando estalla. Encadena combos, busca las doradas y no toques las estrellas estables.',
+      en: 'Catch each supernova right as it bursts. Chain combos, look for the golden ones and leave the steady stars alone.',
+    },
+  ),
+  game(
+    { id: 'memory', icon: '♫', level: 2, scene: 'galaxy', make: (c) => new StarMemory(c), best: (v) => `${tr('nivel', 'level')} ${v}` },
+    { es: 'Memoria estelar', en: 'Star Memory' },
+    { es: 'Repite la melodía de las estrellas. Cada nivel da más.', en: "Echo the stars' melody. Each level pays more." },
+    {
+      es: 'Las estrellas cantan una melodía: repítela. Cada nivel suma una nota y da más polvo estelar que el anterior.',
+      en: 'The stars sing a melody: sing it back. Each level adds a note and pays more stardust than the last.',
+    },
+  ),
+  game(
+    { id: 'constellations', icon: '✧', level: 3, scene: 'sky', make: (c) => new ConstellationGame(c), best: pts },
+    { es: 'Constelaciones', en: 'Constellations' },
+    { es: 'Dibuja constelaciones en tu cielo: +2% de producción cada una.', en: 'Draw constellations in your sky: +2% production each.' },
+    {
+      es: 'Encuentra figuras escondidas en el cielo y une sus estrellas. Cada constelación nueva queda en tu cielo y te da un +2% de producción para siempre.',
+      en: 'Find figures hidden in the sky and connect their stars. Each new constellation stays in your sky and gives you +2% production forever.',
+    },
+  ),
+  game(
+    { id: 'burst', icon: '✺', level: 4, scene: 'galaxy', make: (c) => new StarBurst(c), best: pts },
+    { es: 'Estrella explosiva', en: 'Star Burst' },
+    { es: 'Comprime un núcleo al ritmo de sus latidos hasta que estalle.', en: 'Compress a core to the rhythm of its heartbeat until it bursts.' },
+    {
+      es: 'Vuela hasta una estrella y comprime su núcleo al ritmo de sus latidos, del hidrógeno al hierro… hasta que estalle.',
+      en: 'Fly to a star and compress its core to the rhythm of its heartbeat, from hydrogen to iron… until it bursts.',
+    },
+  ),
+  game(
+    { id: 'dwarf', icon: '◉', level: 6, scene: 'galaxy', make: (c) => new DwarfMerger(c), best: pts },
+    { es: 'Galaxias enanas', en: 'Dwarf Galaxies' },
+    { es: 'Atrae tres galaxias enanas con tu marea gravitatoria.', en: 'Draw in three dwarf galaxies with your gravitational tide.' },
+    {
+      es: 'Tres galaxias enanas caen hacia la tuya. Atráelas con tu marea pulsando cuando la aguja cruce la zona verde.',
+      en: 'Three dwarf galaxies are falling toward yours. Draw them in with your tide by pressing when the needle crosses the green zone.',
+    },
+  ),
+  game(
+    { id: 'sling', icon: '☄', level: 8, scene: 'galaxy', make: (c) => new Slingshot(c), best: pts },
+    { es: 'Honda gravitatoria', en: 'Gravity Slingshot' },
+    { es: 'Lanza cometas y curva su camino con la gravedad.', en: 'Launch comets and let gravity bend their path.' },
+    {
+      es: 'Lanza cometas y deja que la gravedad curve su camino para recoger polvo estelar. Pasar rozando el agujero negro multiplica lo que reúnes.',
+      en: 'Launch comets and let gravity bend their path to collect stardust. Skimming past the black hole multiplies what you gather.',
+    },
+  ),
 ];
 
 /** Practice (no energy left) pays this fraction of the reward. */
@@ -95,9 +147,9 @@ export class Observatory {
     this.menu = h('div', 'obs-menu interactive');
     this.menu.innerHTML = `
       <div class="obs-top">
-        <div><div class="label">Observatorio</div><div class="obs-sub"></div></div>
+        <div><div class="label obs-title"></div><div class="obs-sub"></div></div>
         <div class="obs-energy"></div>
-        <button class="obs-x" title="Volver a la galaxia (O / Esc)">✕</button>
+        <button class="obs-x">✕</button>
       </div>
       <div class="obs-cards"></div>`;
     this.cards = this.menu.querySelector('.obs-cards') as HTMLElement;
@@ -152,6 +204,15 @@ export class Observatory {
     };
     window.addEventListener('keydown', this.onKey, true);
     this.regen();
+    this.onLanguage();
+  }
+
+  /** Rewrites the texts built once, and whatever screen is showing, in the current language. */
+  onLanguage() {
+    (this.menu.querySelector('.obs-title') as HTMLElement).textContent = tr('Observatorio', 'Observatory');
+    (this.menu.querySelector('.obs-x') as HTMLElement).title = tr('Volver a la galaxia (O / Esc)', 'Back to the galaxy (O / Esc)');
+    this.hud.onLanguage();
+    if (this.isOpen && this.menu.classList.contains('show')) this.renderCards();
   }
 
   private get obs() {
@@ -211,7 +272,7 @@ export class Observatory {
     this.skyPose();
     if (!g.prog.tutorialSeen('obs_intro')) {
       g.prog.markTutorial('obs_intro');
-      g.hud.titleCard('Observatorio', 'TU CIELO', 'Tus constelaciones solo se ven desde aquí', 3.5);
+      g.hud.titleCard(tr('Observatorio', 'Observatory'), tr('TU CIELO', 'YOUR SKY'), tr('Tus constelaciones solo se ven desde aquí', 'Your constellations can only be seen from here'), 3.5);
     }
   }
 
@@ -261,15 +322,20 @@ export class Observatory {
       const locked = L < d.level;
       const best = o.best[d.id];
       const st = o.stars[d.id] ?? 0;
-      const extra = d.id === 'constellations' ? `<div class="obs-extra">${o.constellations.length}/${CONSTELLATIONS.length} en tu cielo · +${Math.round(o.constellations.length * CONSTELLATION_BONUS * 100)}% producción</div>` : '';
+      const extra =
+        d.id === 'constellations'
+          ? `<div class="obs-extra">${o.constellations.length}/${CONSTELLATIONS.length} ${tr('en tu cielo', 'in your sky')} · +${Math.round(o.constellations.length * CONSTELLATION_BONUS * 100)}% ${tr('de producción', 'production')}</div>`
+          : '';
       return `<div class="obs-card${locked ? ' locked' : ''}" title="${d.desc}">
         <div class="obs-ico">${d.icon}</div>
         <div class="obs-name">${d.name}</div>
         <div class="obs-stars">${stars(st)}</div>
         <div class="obs-desc">${d.short}</div>
         ${extra}
-        <div class="obs-best">${best ? `Récord: ${d.best(best)}` : locked ? '' : 'Sin récord todavía'}</div>
-        <button class="btn small" data-game="${d.id}" ${locked ? 'disabled' : ''}>${locked ? `🔒 Galaxia nivel ${d.level}` : e > 0 ? 'Jugar · ◆ 1' : 'Practicar (20%)'}</button>
+        <div class="obs-best">${best ? `${tr('Récord', 'Record')}: ${d.best(best)}` : locked ? '' : tr('Sin récord todavía', 'No record yet')}</div>
+        <button class="btn small" data-game="${d.id}" ${locked ? 'disabled' : ''}>${
+          locked ? `🔒 ${tr('Galaxia nivel', 'Galaxy level')} ${d.level}` : e > 0 ? tr('Jugar · ◆ 1', 'Play · ◆ 1') : tr('Practicar (20%)', 'Practice (20%)')
+        }</button>
       </div>`;
     }).join('');
     this.renderEnergy();
@@ -279,11 +345,14 @@ export class Observatory {
     const e = this.energy;
     const next = this.nextEnergy;
     const pips = '◆'.repeat(e) + '◇'.repeat(OBS_ENERGY_MAX - e);
-    const html = `<b>${pips}</b><small>${e >= OBS_ENERGY_MAX ? 'Energía de observación completa' : `+1 en ${formatTime(next)}`}</small>`;
+    const html = `<b>${pips}</b><small>${e >= OBS_ENERGY_MAX ? tr('Energía de observación completa', 'Observation energy full') : `+1 ${tr('en', 'in')} ${formatTime(next)}`}</small>`;
     if (this.energyEl.innerHTML !== html) this.energyEl.innerHTML = html;
     const o = this.obs;
     const sub = this.menu.querySelector('.obs-sub') as HTMLElement;
-    const s = `Tu cielo: ${o.constellations.length}/${CONSTELLATIONS.length} constelaciones · cada partida con ◆ paga lo que tu galaxia produce en varios minutos`;
+    const s = tr(
+      `Tu cielo: ${o.constellations.length}/${CONSTELLATIONS.length} constelaciones · cada partida con ◆ te da lo que tu galaxia produce en varios minutos`,
+      `Your sky: ${o.constellations.length}/${CONSTELLATIONS.length} constellations · each game with ◆ gives you several minutes of your galaxy's production`,
+    );
     if (sub.textContent !== s) sub.textContent = s;
   }
 
@@ -368,7 +437,9 @@ export class Observatory {
     if (r.constellation && !o.constellations.includes(r.constellation)) {
       o.constellations.push(r.constellation);
       const c = CONSTELLATIONS.find((x) => x.id === r.constellation)!;
-      extras.push(`✧ <b>${c.name}</b> ya brilla en tu cielo · producción +${Math.round(CONSTELLATION_BONUS * 100)}% (total +${Math.round(o.constellations.length * CONSTELLATION_BONUS * 100)}%)`);
+      const add = Math.round(CONSTELLATION_BONUS * 100);
+      const total = Math.round(o.constellations.length * CONSTELLATION_BONUS * 100);
+      extras.push(tr(`✧ <b>${c.name}</b> ya brilla en tu cielo · producción +${add}% (total +${total}%)`, `✧ <b>${c.name}</b> now shines in your sky · production +${add}% (total +${total}%)`));
       if (o.constellations.length >= 6) this.unlock('palette:estelar', extras);
       if (o.constellations.length >= CONSTELLATIONS.length) g.prog.achieve('mg_constellations');
     }
@@ -380,9 +451,9 @@ export class Observatory {
     this.resultEl.innerHTML = `<div class="panel mg-card">
       <div class="label">${def.icon} ${def.name}</div>
       <div class="mg-stars">${'<i class="on">★</i>'.repeat(r.stars)}${'<i>★</i>'.repeat(3 - r.stars)}</div>
-      <div class="mg-score">${r.record !== undefined ? recLabel(recVal) : pts(r.score)}${isRecord ? '<span class="rec">¡Nuevo récord!</span>' : prevBest ? `<span class="prev">récord ${recLabel(prevBest)}</span>` : ''}</div>
+      <div class="mg-score">${r.record !== undefined ? recLabel(recVal) : pts(r.score)}${isRecord ? `<span class="rec">${tr('¡Nuevo récord!', 'New record!')}</span>` : prevBest ? `<span class="prev">${tr('récord', 'record')} ${recLabel(prevBest)}</span>` : ''}</div>
       <div class="mg-lines">${r.lines.map((l) => `<div>${l}</div>`).join('')}</div>
-      <div class="mg-reward">+${formatBig(dust)} <span>✦</span>${this.practice ? '<small>práctica sin energía: 20%</small>' : ''}</div>
+      <div class="mg-reward">+${formatBig(dust)} <span>✦</span>${this.practice ? `<small>${tr('práctica sin energía: 20%', 'practice without energy: 20%')}</small>` : ''}</div>
       ${extras.map((x) => `<div class="mg-extra">${x}</div>`).join('')}
       <div class="actions"></div>
     </div>`;
@@ -396,8 +467,8 @@ export class Observatory {
       });
       actions.appendChild(b);
     };
-    btn(this.energy > 0 ? 'Otra vez · ◆ 1' : 'Practicar otra vez', () => this.launch(def.id));
-    btn('Volver al observatorio', () => this.backToMenu());
+    btn(this.energy > 0 ? tr('Otra vez · ◆ 1', 'Again · ◆ 1') : tr('Practicar otra vez', 'Practice again'), () => this.launch(def.id));
+    btn(tr('Volver al observatorio', 'Back to the observatory'), () => this.backToMenu());
     this.resultEl.classList.add('show');
     if (def.scene === 'galaxy') this.skyPose();
   }
@@ -407,9 +478,10 @@ export class Observatory {
     if (s.unlocked[key]) return;
     s.unlocked[key] = true;
     const [kind, id] = key.split(':');
-    const name = kind === 'palette' ? `Paleta «${PALETTES.find((p) => p.id === id)?.name}»` : `Jets «${JET_OPTIONS.find((j) => j.id === id)?.name}»`;
-    extras.push(`🎨 Nuevo estilo exclusivo: <b>${name}</b> (Tienda › Galaxia)`);
-    this.host.game.hud.toast('🎨', 'Estilo exclusivo desbloqueado', name);
+    const style = (kind === 'palette' ? PALETTES.find((p) => p.id === id)?.name : JET_OPTIONS.find((j) => j.id === id)?.name) ?? '';
+    const name = kind === 'palette' ? tr(`Paleta «${style}»`, `“${style}” palette`) : tr(`Chorros «${style}»`, `“${style}” jets`);
+    extras.push(tr(`🎨 Nuevo estilo exclusivo: <b>${name}</b> (Tienda › Galaxia)`, `🎨 New exclusive style: <b>${name}</b> (Shop › Galaxy)`));
+    this.host.game.hud.toast('🎨', tr('Estilo exclusivo desbloqueado', 'Exclusive style unlocked'), name);
   }
 
   private backToMenu() {
@@ -477,7 +549,7 @@ export class Observatory {
       g.font = '500 13px "Chakra Petch", sans-serif';
       g.textAlign = 'center';
       g.fillStyle = 'rgba(225, 232, 248, 0.6)';
-      g.fillText('Tu cielo está vacío: juega a «Constelaciones» y tus figuras brillarán aquí', W / 2, H * 0.3);
+      g.fillText(tr('Tu cielo todavía está vacío: juega a «Constelaciones» y tus figuras brillarán aquí', 'Your sky is still empty: play “Constellations” and your figures will shine here'), W / 2, H * 0.3);
     }
   }
 

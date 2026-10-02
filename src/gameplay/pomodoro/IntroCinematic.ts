@@ -5,6 +5,7 @@ import { StarBody, type StarLook } from '../../vfx/StarBody';
 import { JetBeam } from '../../vfx/Effects';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { TAU, clamp, damp, easeInExpo, easeInOut, easeOutCubic } from '../../utils/math';
+import { withText, type Bi } from '../../i18n/i18n';
 
 type Pose = 'dust' | 'cloud' | 'disk' | 'scatter' | 'boom' | 'debris' | 'gone';
 
@@ -16,15 +17,17 @@ interface Stage {
   sky: string;
 }
 
+const stage = (b: Omit<Stage, 'caption'>, caption: Bi): Stage => withText(b, { caption });
+
 /** The journey, from dust to a galaxy (seconds from the start). */
 const STAGES: Stage[] = [
-  { at: 0, pose: 'dust', caption: 'Al principio, solo había polvo en la oscuridad.', era: 'primordial', sky: 'darkAges' },
-  { at: 7.5, pose: 'cloud', caption: 'La gravedad lo reunió en una nube.', era: 'cloud', sky: 'cloud' },
-  { at: 14.5, pose: 'disk', caption: 'En su centro se encendió una estrella.', era: 'protostar', sky: 'stellar' },
-  { at: 21.5, pose: 'scatter', caption: 'Brilló millones de años, forjando los elementos.', era: 'star', sky: 'stellar' },
-  { at: 28.5, pose: 'boom', caption: 'Hasta que colapsó… y estalló.', era: 'iron', sky: 'collapse' },
-  { at: 36, pose: 'debris', caption: 'De sus restos nació un agujero negro.', era: 'blackhole', sky: 'blackhole' },
-  { at: 44, pose: 'gone', caption: 'Y a su alrededor, toda una galaxia.', era: 'galaxy', sky: 'cluster' },
+  stage({ at: 0, pose: 'dust', era: 'primordial', sky: 'darkAges' }, { es: 'Al principio, solo había polvo en la oscuridad.', en: 'In the beginning, there was only dust in the dark.' }),
+  stage({ at: 7.5, pose: 'cloud', era: 'cloud', sky: 'cloud' }, { es: 'La gravedad lo reunió en una nube.', en: 'Gravity gathered it into a cloud.' }),
+  stage({ at: 14.5, pose: 'disk', era: 'protostar', sky: 'stellar' }, { es: 'En su centro se encendió una estrella.', en: 'At its heart, a star lit up.' }),
+  stage({ at: 21.5, pose: 'scatter', era: 'star', sky: 'stellar' }, { es: 'Brilló durante millones de años, forjando los elementos.', en: 'It shone for millions of years, forging the elements.' }),
+  stage({ at: 28.5, pose: 'boom', era: 'iron', sky: 'collapse' }, { es: 'Hasta que colapsó… y estalló.', en: 'Until it collapsed… and burst.' }),
+  stage({ at: 36, pose: 'debris', era: 'blackhole', sky: 'blackhole' }, { es: 'De sus restos nació un agujero negro.', en: 'From its remains, a black hole was born.' }),
+  stage({ at: 44, pose: 'gone', era: 'galaxy', sky: 'cluster' }, { es: 'Y a su alrededor, toda una galaxia.', en: 'And around it, a whole galaxy.' }),
 ];
 export const INTRO_LENGTH = 56;
 

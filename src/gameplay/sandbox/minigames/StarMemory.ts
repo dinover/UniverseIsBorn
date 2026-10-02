@@ -1,6 +1,7 @@
 import { h } from '../../../ui/Hud';
 import { TAU, formatBig } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { tr } from '../../../i18n/i18n';
 
 type Stage = 'pause' | 'show' | 'input' | 'over';
 
@@ -48,8 +49,16 @@ export class StarMemory extends Minigame {
     this.lit = new Array(8).fill(0);
     for (let i = 0; i < 3; i++) this.seq.push(this.randomNode());
     this.g.rig.animate({ distance: c.view * 1.15, pitch: 1.05 }, 1.5);
-    c.hud.set({ title: '♫ Memoria estelar', combo: '', progress: null, hint: 'Escucha la melodía y repítela tocando las estrellas (o con las teclas <kbd>1</kbd>–<kbd>8</kbd>)' });
-    c.hud.banner('Nivel 1', 'Escucha…', 1.4);
+    c.hud.set({
+      title: `♫ ${tr('Memoria estelar', 'Star Memory')}`,
+      combo: '',
+      progress: null,
+      hint: tr(
+        'Escucha la melodía y repítela tocando las estrellas (o con las teclas <kbd>1</kbd>–<kbd>8</kbd>)',
+        'Listen to the melody and play it back on the stars (or with keys <kbd>1</kbd>–<kbd>8</kbd>)',
+      ),
+    });
+    c.hud.banner(`${tr('Nivel', 'Level')} 1`, tr('Escucha…', 'Listen…'), 1.4);
     this.stageT = -0.6;
   }
 
@@ -94,7 +103,7 @@ export class StarMemory extends Minigame {
     this.g.audio.buzz();
     this.nodes[i].classList.add('bad');
     this.nodes[this.seq[this.pos]].classList.add('hint');
-    c.hud.banner('¡Desafinada!', `Era la estrella ${this.seq[this.pos] + 1}`, 1.8);
+    c.hud.banner(tr('Esa no era', 'Not quite'), `${tr('Era la estrella', 'It was star')} ${this.seq[this.pos] + 1}`, 1.8);
   }
 
   private levelDone() {
@@ -103,14 +112,21 @@ export class StarMemory extends Minigame {
     this.earned += r;
     this.completed = this.level;
     const dust = r * c.unit;
-    c.hud.pop(`Nivel ${this.level} ✓ +${formatBig(dust)} ✦`, window.innerWidth / 2, window.innerHeight * 0.3, '#ffe6a8', 20);
+    c.hud.pop(`${tr('Nivel', 'Level')} ${this.level} ✓ +${formatBig(dust)} ✦`, window.innerWidth / 2, window.innerHeight * 0.3, '#ffe6a8', 20);
     this.g.audio.achievement();
     this.level++;
     this.seq.push(this.randomNode());
     this.stage = 'pause';
     this.stageT = -0.4;
-    const extra = this.level === 5 ? 'Aparecen dos estrellas nuevas' : this.level === 7 ? '¡Ahora las estrellas giran!' : this.level === 9 ? 'Ocho estrellas: el coro completo' : 'Escucha…';
-    c.hud.banner(`Nivel ${this.level}`, extra, 1.3);
+    const extra =
+      this.level === 5
+        ? tr('Aparecen dos estrellas nuevas', 'Two new stars appear')
+        : this.level === 7
+          ? tr('¡Ahora las estrellas giran!', 'Now the stars are turning!')
+          : this.level === 9
+            ? tr('Ocho estrellas: el coro completo', 'Eight stars: the full choir')
+            : tr('Escucha…', 'Listen…');
+    c.hud.banner(`${tr('Nivel', 'Level')} ${this.level}`, extra, 1.3);
   }
 
   protected step(dt: number) {
@@ -153,12 +169,12 @@ export class StarMemory extends Minigame {
       b.classList.toggle('lit', this.lit[i] > 0);
       b.disabled = this.stage !== 'input';
     }
-    const status = this.stage === 'input' ? `¡Tu turno! ${this.pos}/${this.seq.length}` : this.stage === 'over' ? 'Fin' : 'Escucha…';
-    const html = `<b>Nivel ${this.level}</b><small>${status}</small>`;
+    const status = this.stage === 'input' ? `${tr('¡Tu turno!', 'Your turn!')} ${this.pos}/${this.seq.length}` : this.stage === 'over' ? tr('Fin', 'The end') : tr('Escucha…', 'Listen…');
+    const html = `<b>${tr('Nivel', 'Level')} ${this.level}</b><small>${status}</small>`;
     if (this.core.innerHTML !== html) this.core.innerHTML = html;
     c.hud.set({
-      score: `Récord: nivel ${Math.max(c.best, this.completed)}`,
-      timer: `Botín: ${formatBig(this.earned * c.unit)} ✦`,
+      score: `${tr('Récord: nivel', 'Record: level')} ${Math.max(c.best, this.completed)}`,
+      timer: `${tr('Reunido', 'Gathered')}: ${formatBig(this.earned * c.unit)} ✦`,
     });
   }
 
@@ -171,8 +187,18 @@ export class StarMemory extends Minigame {
       stars,
       rewardSeconds: this.earned,
       record: L,
-      recordLabel: (v) => `nivel ${v}`,
-      lines: [L ? `Completaste <b>${L}</b> ${L === 1 ? 'nivel' : 'niveles'} · melodía de <b>${L + 2}</b> notas` : 'No completaste ningún nivel', quit ? 'Te retiraste con el botín acumulado' : `Cada nivel paga más: el ${L + 1} habría dado ${formatBig(memoryLevelReward(L + 1) * this.ctx.unit)} ✦`],
+      recordLabel: (v) => `${tr('nivel', 'level')} ${v}`,
+      lines: [
+        L
+          ? tr(`Completaste <b>${L}</b> ${L === 1 ? 'nivel' : 'niveles'} · melodía de <b>${L + 2}</b> notas`, `You completed <b>${L}</b> ${L === 1 ? 'level' : 'levels'} · a melody of <b>${L + 2}</b> notes`)
+          : tr('Esta vez no completaste ningún nivel', "You didn't complete a level this time"),
+        quit
+          ? tr('Te retiraste con todo lo reunido', 'You left with everything you gathered')
+          : tr(
+              `Cada nivel da más: el ${L + 1} habría dado ${formatBig(memoryLevelReward(L + 1) * this.ctx.unit)} ✦`,
+              `Each level pays more: level ${L + 1} would have given ${formatBig(memoryLevelReward(L + 1) * this.ctx.unit)} ✦`,
+            ),
+      ],
       achievements: L >= 10 ? ['mg_memory10'] : [],
     };
   }

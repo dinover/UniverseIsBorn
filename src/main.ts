@@ -10,6 +10,7 @@ import { NeutronPhase } from './gameplay/phases/NeutronPhase';
 import { BlackHolePhase } from './gameplay/phases/BlackHolePhase';
 import { GalaxyPhase } from './gameplay/phases/GalaxyPhase';
 import { PomodoroPhase } from './gameplay/phases/PomodoroPhase';
+import { tr } from './i18n/i18n';
 
 function webglAvailable() {
   try {
@@ -23,7 +24,10 @@ function webglAvailable() {
 function boot() {
   const bootEl = document.getElementById('boot')!;
   if (!webglAvailable()) {
-    bootEl.innerHTML = '<div style="max-width:420px;text-align:center;letter-spacing:0.1em;line-height:1.8">Tu navegador no soporta WebGL.<br/>Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</div>';
+    bootEl.innerHTML = `<div style="max-width:420px;text-align:center;letter-spacing:0.1em;line-height:1.8">${tr(
+      'Tu navegador no es compatible con WebGL.<br/>Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.',
+      "Your browser doesn't support WebGL.<br/>Try a recent version of Chrome, Edge, Firefox or Safari.",
+    )}</div>`;
     return;
   }
   const game = new Game(document.getElementById('game')!, document.getElementById('ui')!);

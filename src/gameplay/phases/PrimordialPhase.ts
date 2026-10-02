@@ -5,6 +5,7 @@ import { Ring } from '../../vfx/Effects';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, damp, formatSolar } from '../../utils/math';
 import type { Rng } from '../../procgen/rng';
+import { tr } from '../../i18n/i18n';
 
 const GOAL = 3200;
 const WORLD = 300;
@@ -64,7 +65,7 @@ export class PrimordialPhase extends Phase {
   private collapseT = 0;
 
   touchLabels(): [string | null, string | null] {
-    return ['Pulso', null];
+    return [tr('Pulso', 'Pulse'), null];
   }
 
   enter() {
@@ -165,15 +166,31 @@ export class PrimordialPhase extends Phase {
   private async script() {
     const g = this.game;
     await this.wait(1.2);
-    g.hud.titleCard('Materia primordial', 'ETAPA 01', 'La edad oscura del universo', 3.5);
+    g.hud.titleCard(tr('Materia primordial', 'Primordial matter'), tr('ETAPA 01', 'STAGE 01'), tr('La edad oscura del universo', 'The dark ages of the universe'), 3.5);
     await this.wait(3.5);
-    const moveHint = g.input.touchMode ? 'Arrastra en la parte izquierda de la pantalla para moverte.' : 'Mueve el <kbd>CURSOR</kbd> para desplazarte (o <kbd>WASD</kbd>).';
-    this.tutorial('p1_move', `Eres una pequeña concentración de materia. ${moveHint}<br/>Tu gravedad, aún muy débil, atrae el gas cercano.`, 8);
+    const moveHint = g.input.touchMode
+      ? tr('Arrastra el dedo por la parte izquierda de la pantalla para moverte.', 'Drag your finger on the left side of the screen to move.')
+      : tr('Mueve el <kbd>CURSOR</kbd> para desplazarte (o usa <kbd>WASD</kbd>).', 'Move the <kbd>CURSOR</kbd> to drift around (or use <kbd>WASD</kbd>).');
+    this.tutorial(
+      'p1_move',
+      tr(
+        `Eres una pequeña concentración de materia. ${moveHint}<br/>Tu gravedad, todavía muy suave, atrae el gas que tienes cerca.`,
+        `You are a small gathering of matter. ${moveHint}<br/>Your gravity, still very gentle, draws in the gas around you.`,
+      ),
+      8,
+    );
     await this.wait(9);
-    this.tutorial('p1_dense', 'Busca las zonas más densas: donde hay más gas, creces más rápido.', 6);
+    this.tutorial('p1_dense', tr('Busca las zonas más densas: donde hay más gas, creces más rápido.', 'Seek out the densest areas: where there is more gas, you grow faster.'), 6);
     await this.wait(7);
     if (!this.everPulsed)
-      this.tutorial('p1_pulse', `Mantén <kbd>${g.input.touchMode ? 'PULSO' : 'CLIC'}</kbd> o <kbd>ESPACIO</kbd> para un <b>pulso gravitacional</b>: más alcance y fuerza, pero consume energía.`, 8);
+      this.tutorial(
+        'p1_pulse',
+        tr(
+          `Mantén <kbd>${g.input.touchMode ? 'PULSO' : 'CLIC'}</kbd> o <kbd>ESPACIO</kbd> para lanzar un <b>pulso gravitacional</b>: llegas más lejos y atraes con más fuerza, aunque gastas energía.`,
+          `Hold <kbd>${g.input.touchMode ? 'PULSE' : 'CLICK'}</kbd> or <kbd>SPACE</kbd> to send out a <b>gravity pulse</b>: you reach farther and pull harder, though it uses energy.`,
+        ),
+        8,
+      );
   }
 
   debugSkip() {
@@ -232,9 +249,16 @@ export class PrimordialPhase extends Phase {
         if (!w.found) {
           w.found = true;
           g.prog.discover('darkmatter');
-          g.hud.floater('POZO DE MATERIA OSCURA · GRAVEDAD ×2', P.clone().add(new THREE.Vector3(0, 4, 0)), '#c7b4ff', 15, 2.2);
+          g.hud.floater(tr('POZO DE MATERIA OSCURA · GRAVEDAD ×2', 'DARK MATTER WELL · GRAVITY ×2'), P.clone().add(new THREE.Vector3(0, 4, 0)), '#c7b4ff', 15, 2.2);
           g.audio.whoosh(0.12);
-          this.tutorial('p1_well', 'Entraste en un <b>pozo de materia oscura</b>: aquí tu atracción se duplica. Las distorsiones del fondo te delatan dónde están.', 7);
+          this.tutorial(
+            'p1_well',
+            tr(
+              'Estás dentro de un <b>pozo de materia oscura</b>: aquí tu atracción se duplica. Las ondulaciones del fondo te ayudan a encontrar los demás.',
+              "You've entered a <b>dark matter well</b>: here your pull doubles. The ripples in the background help you find the others.",
+            ),
+            7,
+          );
         }
       }
     }
@@ -309,10 +333,10 @@ export class PrimordialPhase extends Phase {
 
     // --- HUD & progression
     const prog = this.mass / GOAL;
-    g.hud.setMass(formatSolar(this.mass), 'M☉', this.inWell ? 'dentro de un pozo de materia oscura' : 'hidrógeno · helio · polvo');
-    g.hud.setObjective(this.done ? 'Masa crítica alcanzada' : `Acumula masa para formar una nube · ${Math.floor(prog * 100)}%`, prog);
-    g.hud.setMeters([{ id: 'energy', label: 'Energía gravitatoria', value: this.energy, color: '#ffcf8a' }]);
-    this.abilities([{ id: 'pulse', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Pulso gravitacional', active: this.pulsing, charge: this.energy }]);
+    g.hud.setMass(formatSolar(this.mass), 'M☉', this.inWell ? tr('dentro de un pozo de materia oscura', 'inside a dark matter well') : tr('hidrógeno · helio · polvo', 'hydrogen · helium · dust'));
+    g.hud.setObjective(this.done ? tr('Masa crítica alcanzada', 'Critical mass reached') : `${tr('Reúne masa para formar una nube', 'Gather mass to form a cloud')} · ${Math.floor(prog * 100)}%`, prog);
+    g.hud.setMeters([{ id: 'energy', label: tr('Energía gravitatoria', 'Gravitational energy'), value: this.energy, color: '#ffcf8a' }]);
+    this.abilities([{ id: 'pulse', key: input.touchMode ? tr('BTN', 'BTN') : tr('CLIC', 'CLICK'), name: tr('Pulso gravitacional', 'Gravity pulse'), active: this.pulsing, charge: this.energy }]);
     g.audio.setIntensity(0.15 + prog * 0.35 + (this.pulsing ? 0.15 : 0));
 
     // Camera grows with you
@@ -396,7 +420,7 @@ export class PrimordialPhase extends Phase {
     g.audio.swell(8);
     g.audio.whoosh(0.3);
     g.pipe.final.letterboxTarget = 1;
-    g.hud.titleCard('Masa crítica', 'LA GRAVEDAD GANA', 'El gas empieza a caer hacia ti', 3.5);
+    g.hud.titleCard(tr('Masa crítica', 'Critical mass'), tr('LA GRAVEDAD TOMA EL CONTROL', 'GRAVITY TAKES OVER'), tr('El gas empieza a caer hacia ti', 'The gas begins to fall toward you'), 3.5);
     g.rig.animate({ distance: g.rig.state.distance * 2.6, pitch: 0.75 }, 5);
     const start = this.t;
     while (this.alive && this.t - start < 4.5) {

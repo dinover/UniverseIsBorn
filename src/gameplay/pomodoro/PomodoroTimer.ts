@@ -1,3 +1,5 @@
+import { tr } from '../../i18n/i18n';
+
 import { LocalStorageBackend } from '../../persistence/SaveSystem';
 
 export type PomoKind = 'focus' | 'short' | 'long';
@@ -51,7 +53,7 @@ export function savePomo(s: PomoSave) {
   store.save(KEY, s);
 }
 
-export const KIND_LABEL: Record<PomoKind, string> = { focus: 'Foco', short: 'Pausa corta', long: 'Pausa larga' };
+export const kindLabel = (k: PomoKind) => (k === 'focus' ? tr('Foco', 'Focus') : k === 'short' ? tr('Pausa corta', 'Short break') : tr('Pausa larga', 'Long break'));
 
 /**
  * Pomodoro clock. Runs on wall-clock time (not frame time) so it stays exact when the

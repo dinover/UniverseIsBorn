@@ -4,6 +4,7 @@ import { h } from '../../../ui/Hud';
 import { Rng } from '../../../procgen/rng';
 import { TAU, clamp, damp, easeInOut, lerp } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { int, tr } from '../../../i18n/i18n';
 
 type Stage = 'approach' | 'pull' | 'capture' | 'escaped' | 'won';
 
@@ -53,14 +54,21 @@ export class DwarfMerger extends Minigame {
         <path class="perfect" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" opacity="0.85"/>
         <line class="needle" x1="0" y1="0" x2="0" y2="-70" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
         <circle r="7" fill="#fff"/>
-      </svg><div class="pips"></div><div class="tip">ESPACIO / toca</div>`);
+      </svg><div class="pips"></div><div class="tip">${tr('ESPACIO / toca', 'SPACE / tap')}</div>`);
     c.layer.appendChild(this.dial);
     this.needleEl = this.dial.querySelector('.needle') as SVGElement;
     this.zoneEl = this.dial.querySelector('.zone') as SVGPathElement;
     this.perfectEl = this.dial.querySelector('.perfect') as SVGPathElement;
     this.pipsEl = this.dial.querySelector('.pips') as HTMLElement;
     this.g.rig.animate({ distance: c.view * 1.75, pitch: 0.85 }, 2);
-    c.hud.set({ title: '◉ Galaxias enanas', combo: '', hint: 'Pulsa <kbd>ESPACIO</kbd> o toca cuando la aguja cruce la <b style="color:#7dffb2">zona verde</b> (el centro blanco es perfecto). Cada acierto la atrae; cada fallo la aleja.' });
+    c.hud.set({
+      title: `◉ ${tr('Galaxias enanas', 'Dwarf Galaxies')}`,
+      combo: '',
+      hint: tr(
+        'Pulsa <kbd>ESPACIO</kbd> o toca cuando la aguja cruce la <b style="color:#7dffb2">zona verde</b> (el centro blanco es perfecto). Cada acierto la acerca; cada fallo la aleja.',
+        'Press <kbd>SPACE</kbd> or tap when the needle crosses the <b style="color:#7dffb2">green zone</b> (the white center is perfect). Each hit draws it closer; each miss lets it drift away.',
+      ),
+    });
     this.spawn();
   }
 
@@ -86,7 +94,7 @@ export class DwarfMerger extends Minigame {
     this.spin = 1;
     this.stage = 'approach';
     this.stageT = 0;
-    c.hud.banner(`Galaxia enana ${d + 1}/3`, d === 2 ? 'La última: su zona se mueve' : 'Atráela con tu marea', 1.6);
+    c.hud.banner(`${tr('Galaxia enana', 'Dwarf galaxy')} ${d + 1}/3`, d === 2 ? tr('La última: su zona se mueve', 'The last one: its zone moves') : tr('Atráela con tu marea', 'Draw it in with your tide'), 1.6);
   }
 
   onDown() {
@@ -112,7 +120,7 @@ export class DwarfMerger extends Minigame {
       this.g.audio.hit(perfect ? 'perfect' : 'good', this.combo);
       this.g.shake(0.15);
       this.g.pipe.final.shockwave(this.pos.clone(), 0.3, 0.9, 0.3);
-      hud.pop(`${perfect ? '¡PERFECTO!' : 'BIEN'} +${pts}`, s.x, s.y - 40, perfect ? '#ffffff' : '#7dffb2', perfect ? 20 : 16);
+      hud.pop(`${perfect ? tr('¡PERFECTO!', 'PERFECT!') : tr('BIEN', 'GOOD')} +${pts}`, s.x, s.y - 40, perfect ? '#ffffff' : '#7dffb2', perfect ? 20 : 16);
       // Harder after every hit: faster needle, narrower zone that jumps somewhere else.
       this.speed += 0.3;
       this.half = Math.max(0.22, this.half - 0.035);
@@ -128,7 +136,7 @@ export class DwarfMerger extends Minigame {
       this.hits = Math.max(0, this.hits - 0.5);
       this.spin *= -1;
       this.g.audio.hit('miss');
-      hud.pop('✕ se aleja', s.x, s.y - 40, '#ff8a8a', 16);
+      hud.pop(`✕ ${tr('se aleja', 'drifting away')}`, s.x, s.y - 40, '#ff8a8a', 16);
     }
   }
 
@@ -157,7 +165,7 @@ export class DwarfMerger extends Minigame {
         this.stage = 'escaped';
         this.stageT = 0;
         g.audio.warning();
-        c.hud.banner('¡Se escapó!', `Atrajiste ${this.captured} de 3 galaxias enanas`, 2);
+        c.hud.banner(tr('Siguió su camino', 'It went its own way'), tr(`Atrajiste ${this.captured} de 3 galaxias enanas`, `You drew in ${this.captured} of 3 dwarf galaxies`), 2);
       }
     } else if (this.stage === 'capture') {
       const k = clamp(this.stageT / 2.6);
@@ -188,8 +196,8 @@ export class DwarfMerger extends Minigame {
     }
     this.renderDial(need);
     c.hud.set({
-      score: `${this.score.toLocaleString('es')} pts`,
-      combo: `capturadas ${this.captured}/3`,
+      score: `${int(this.score)} pts`,
+      combo: `${tr('reunidas', 'gathered')} ${this.captured}/3`,
       timer: this.stage === 'pull' ? `${Math.max(0, this.timeLeft).toFixed(1)} s` : '',
       progress: this.stage === 'pull' ? this.timeLeft / TIME[this.d] : this.stage === 'capture' ? 1 : null,
     });
@@ -206,7 +214,7 @@ export class DwarfMerger extends Minigame {
     g.pipe.bloomBoost = 1.5;
     g.audio.boom();
     g.shake(0.5);
-    c.hud.banner('¡Fusión!', `+${bonus} pts · sus estrellas ya son tuyas`, 1.8);
+    c.hud.banner(tr('¡Fusión!', 'Merged!'), tr(`+${bonus} pts · sus estrellas ahora son parte de tu galaxia`, `+${bonus} pts · its stars are now part of your galaxy`), 1.8);
     if (this.dwarf) {
       c.group.remove(this.dwarf);
       this.dwarf.dispose();
@@ -242,7 +250,7 @@ export class DwarfMerger extends Minigame {
       score: this.score,
       stars: quit ? 0 : n,
       rewardSeconds: n * 60 + this.score / 80,
-      lines: [`Galaxias enanas absorbidas: <b>${n}/3</b>`, `Perfectos <b>${this.perfects}</b> · fallos <b>${this.misses}</b>`],
+      lines: [`${tr('Galaxias enanas reunidas', 'Dwarf galaxies gathered')}: <b>${n}/3</b>`, tr(`Perfectos <b>${this.perfects}</b> · fallos <b>${this.misses}</b>`, `Perfect <b>${this.perfects}</b> · misses <b>${this.misses}</b>`)],
       achievements: n >= 3 ? ['mg_dwarf3'] : [],
     };
   }

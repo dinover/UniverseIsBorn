@@ -8,20 +8,22 @@ import { clamp, damp, formatSolar } from '../../utils/math';
 import { h } from '../../ui/Hud';
 import type { Rng } from '../../procgen/rng';
 import type { LoopHandle } from '../../audio/AudioEngine';
+import { num, pick, tr, type Bi } from '../../i18n/i18n';
 
 type Pattern = 'single' | 'golden' | 'alternate' | 'shells' | 'triplets';
 
 interface ElementDef {
   sym: string;
-  name: string;
-  coreTemp: string;
+  name: Bi;
+  /** Core temperature in millions of kelvin. */
+  coreTemp: number;
   period: number;
   travel: number;
   pattern: Pattern;
   need: number;
   radius: number;
   onion: string;
-  unlock: string;
+  unlock: Bi;
   look: StarLook;
 }
 
@@ -38,15 +40,16 @@ const L = (c: number[], hot: number[], gran: number, inten: number, spots: numbe
 });
 
 const ELEMENTS: ElementDef[] = [
-  { sym: 'H', name: 'Hidrógeno', coreTemp: '15 MK', period: 1.7, travel: 1.35, pattern: 'single', need: 7, radius: 3, onion: '#7fb6ff', unlock: 'Fusión estable: el ritmo del núcleo.', look: L([0.55, 0.7, 1.0], [0.95, 0.97, 1.0], 4, 1.25, 0.05, 0.35, 0.9, 3.2, 0.5) },
-  { sym: 'He', name: 'Helio', coreTemp: '100 MK', period: 1.5, travel: 1.25, pattern: 'golden', need: 7, radius: 4.2, onion: '#ffe28a', unlock: 'Proceso triple alfa: los pulsos dorados valen doble.', look: L([1.0, 0.92, 0.7], [1.0, 1.0, 0.95], 3.4, 1.15, 0.1, 0.45, 0.8, 3.0, 0.4) },
-  { sym: 'C', name: 'Carbono', coreTemp: '600 MK', period: 1.35, travel: 1.15, pattern: 'single', need: 7, radius: 5.6, onion: '#ffb060', unlock: 'Desbloqueas CONVECCIÓN: mantén clic derecho para ralentizar el ritmo.', look: L([1.0, 0.62, 0.3], [1.0, 0.9, 0.6], 2.8, 1.05, 0.25, 0.55, 0.7, 2.8, 0.3) },
-  { sym: 'O', name: 'Oxígeno', coreTemp: '1,5 GK', period: 1.2, travel: 1.05, pattern: 'alternate', need: 7, radius: 7, onion: '#ff7a50', unlock: 'Los pulsos alternan velocidad: lee el ritmo.', look: L([1.0, 0.4, 0.16], [1.0, 0.75, 0.4], 2.2, 1.0, 0.35, 0.7, 0.6, 2.6, 0.3) },
-  { sym: 'Ne', name: 'Neón', coreTemp: '1,2 GK', period: 1.1, travel: 1.0, pattern: 'shells', need: 7, radius: 8, onion: '#ff5aa0', unlock: 'Dos capas activas: atrapa cada pulso en su capa (color).', look: L([0.95, 0.25, 0.12], [1.0, 0.6, 0.45], 1.8, 0.95, 0.4, 0.85, 0.6, 2.5, 0.35) },
-  { sym: 'Si', name: 'Silicio', coreTemp: '2,7 GK', period: 1.0, travel: 0.9, pattern: 'triplets', need: 8, radius: 8.6, onion: '#b48cff', unlock: 'Ráfagas de tres: el silicio se consume en un día.', look: L([0.9, 0.2, 0.1], [0.8, 0.85, 1.0], 1.6, 1.0, 0.45, 1.0, 0.7, 2.5, 0.8) },
+  { sym: 'H', name: { es: 'Hidrógeno', en: 'Hydrogen' }, coreTemp: 15, period: 1.7, travel: 1.35, pattern: 'single', need: 7, radius: 3, onion: '#7fb6ff', unlock: { es: 'Fusión estable: el latido del núcleo.', en: 'Steady fusion: the heartbeat of the core.' }, look: L([0.55, 0.7, 1.0], [0.95, 0.97, 1.0], 4, 1.25, 0.05, 0.35, 0.9, 3.2, 0.5) },
+  { sym: 'He', name: { es: 'Helio', en: 'Helium' }, coreTemp: 100, period: 1.5, travel: 1.25, pattern: 'golden', need: 7, radius: 4.2, onion: '#ffe28a', unlock: { es: 'Proceso triple alfa: los pulsos dorados valen doble.', en: 'Triple-alpha process: golden pulses are worth double.' }, look: L([1.0, 0.92, 0.7], [1.0, 1.0, 0.95], 3.4, 1.15, 0.1, 0.45, 0.8, 3.0, 0.4) },
+  { sym: 'C', name: { es: 'Carbono', en: 'Carbon' }, coreTemp: 600, period: 1.35, travel: 1.15, pattern: 'single', need: 7, radius: 5.6, onion: '#ffb060', unlock: { es: 'Nueva habilidad: la CONVECCIÓN calma el ritmo.', en: 'New ability: CONVECTION calms the rhythm.' }, look: L([1.0, 0.62, 0.3], [1.0, 0.9, 0.6], 2.8, 1.05, 0.25, 0.55, 0.7, 2.8, 0.3) },
+  { sym: 'O', name: { es: 'Oxígeno', en: 'Oxygen' }, coreTemp: 1500, period: 1.2, travel: 1.05, pattern: 'alternate', need: 7, radius: 7, onion: '#ff7a50', unlock: { es: 'Los pulsos cambian de velocidad: escucha el ritmo.', en: 'The pulses change speed: listen to the rhythm.' }, look: L([1.0, 0.4, 0.16], [1.0, 0.75, 0.4], 2.2, 1.0, 0.35, 0.7, 0.6, 2.6, 0.3) },
+  { sym: 'Ne', name: { es: 'Neón', en: 'Neon' }, coreTemp: 1200, period: 1.1, travel: 1.0, pattern: 'shells', need: 7, radius: 8, onion: '#ff5aa0', unlock: { es: 'Dos capas activas: atrapa cada pulso en la capa de su color.', en: 'Two active layers: catch each pulse on the layer of its color.' }, look: L([0.95, 0.25, 0.12], [1.0, 0.6, 0.45], 1.8, 0.95, 0.4, 0.85, 0.6, 2.5, 0.35) },
+  { sym: 'Si', name: { es: 'Silicio', en: 'Silicon' }, coreTemp: 2700, period: 1.0, travel: 0.9, pattern: 'triplets', need: 8, radius: 8.6, onion: '#b48cff', unlock: { es: 'Pulsos de tres en tres: el silicio se consume en apenas un día.', en: 'Pulses in threes: silicon burns away in just one day.' }, look: L([0.9, 0.2, 0.1], [0.8, 0.85, 1.0], 1.6, 1.0, 0.45, 1.0, 0.7, 2.5, 0.8) },
 ];
 const IRON_LOOK = L([0.6, 0.1, 0.05], [1.0, 0.35, 0.2], 1.5, 0.85, 0.6, 1.2, 0.5, 2.3, 1.2);
 const IRON_WAVES = 20;
+const coreTemp = (mk: number) => (mk < 1000 ? `${mk} MK` : `${num(mk / 1000, 1)} GK`);
 
 interface Pulse {
   ring: Ring;
@@ -103,7 +106,7 @@ export class StellarPhase extends Phase {
   private companions: { pos: THREE.Vector3; col: number[]; size: number }[] = [];
 
   touchLabels(): [string | null, string | null] {
-    return ['Fusionar', 'Convección'];
+    return [tr('Fusionar', 'Fuse'), tr('Convección', 'Convection')];
   }
 
   enter() {
@@ -142,7 +145,9 @@ export class StellarPhase extends Phase {
       });
     }
 
-    const w = h('div', 'onion panel', `<div class="label" style="margin-bottom:8px">Capas de fusión</div>`);
+    const w = h('div', 'onion panel', `<div class="label" style="margin-bottom:8px"></div>`);
+    this.onionLabel = w.querySelector('.label') as HTMLElement;
+    this.onLanguage();
     this.onion = document.createElement('canvas');
     this.onion.width = 300;
     this.onion.height = 300;
@@ -152,6 +157,12 @@ export class StellarPhase extends Phase {
     g.hud.widget.appendChild(w);
     this.drawOnion();
     this.script();
+  }
+
+  private onionLabel: HTMLElement | null = null;
+
+  onLanguage() {
+    if (this.onionLabel) this.onionLabel.textContent = tr('Capas de fusión', 'Fusion layers');
   }
 
   private resetWind(i: number, initial = false) {
@@ -170,9 +181,16 @@ export class StellarPhase extends Phase {
     const g = this.game;
     this.pausePulses = 99;
     await this.wait(0.8);
-    g.hud.titleCard('Fusión nuclear', 'ETAPA 04', 'Hidrógeno → Helio', 3.5);
+    g.hud.titleCard(tr('Fusión nuclear', 'Nuclear fusion'), tr('ETAPA 04', 'STAGE 04'), tr('Hidrógeno → Helio', 'Hydrogen → Helium'), 3.5);
     await this.wait(3.5);
-    this.tutorial('s4_rhythm', `El núcleo late. Pulsa <kbd>${g.input.touchMode ? 'FUSIONAR' : 'CLIC'}</kbd> o <kbd>ESPACIO</kbd> justo cuando cada onda de energía cruce el <b>anillo de fusión</b>.`, 9);
+    this.tutorial(
+      's4_rhythm',
+      tr(
+        `El núcleo late como un corazón. Pulsa <kbd>${g.input.touchMode ? 'FUSIONAR' : 'CLIC'}</kbd> o <kbd>ESPACIO</kbd> justo cuando cada onda de energía cruce el <b>anillo de fusión</b>.`,
+        `The core beats like a heart. Press <kbd>${g.input.touchMode ? 'FUSE' : 'CLICK'}</kbd> or <kbd>SPACE</kbd> right as each wave of energy crosses the <b>fusion ring</b>.`,
+      ),
+      9,
+    );
     this.pausePulses = 0.5;
   }
 
@@ -245,7 +263,7 @@ export class StellarPhase extends Phase {
     if (q === 'miss') {
       this.combo = 0;
       this.stability -= this.iron ? 0.12 : 0.17;
-      g.hud.floater('FALLO', pos, '#ff6a5a', 16, 0.9);
+      g.hud.floater(tr('A DESTIEMPO', 'OFF BEAT'), pos, '#ff6a5a', 16, 0.9);
       g.shake(this.iron ? 0.3 : 0.15);
       p.ring.setColor(0xff4040);
       if (this.iron) this.ironMisses++;
@@ -256,7 +274,7 @@ export class StellarPhase extends Phase {
       if (perfect) g.prog.add('perfectHits', 1);
       this.stability = Math.min(1, this.stability + (perfect ? 0.04 : 0.01));
       const val = (perfect ? 1 : 0.6) * (p.golden ? 2 : 1);
-      g.hud.floater(perfect ? (p.golden ? 'PERFECTO ×2' : 'PERFECTO') : 'BIEN', pos, perfect ? '#7dffb2' : '#bfe8ff', perfect ? 18 : 15, 0.9);
+      g.hud.floater(perfect ? (p.golden ? tr('PERFECTO ×2', 'PERFECT ×2') : tr('PERFECTO', 'PERFECT')) : tr('BIEN', 'GOOD'), pos, perfect ? '#7dffb2' : '#bfe8ff', perfect ? 18 : 15, 0.9);
       if (this.combo >= 10 && !this.iron) g.prog.achieve('rhythm');
       if (this.iron) {
         this.ironScore += perfect ? 1 : 0.6;
@@ -355,7 +373,7 @@ export class StellarPhase extends Phase {
       this.flare = 1.5;
       if (!this.iron) this.progress = Math.max(0, this.progress - 1.5);
       this.mass *= 0.98;
-      g.hud.floater('INESTABILIDAD · EYECCIÓN DE MASA', this.star.position.clone().add(new THREE.Vector3(0, R * 2, 0)), '#ff6a4a', 16, 1.8);
+      g.hud.floater(tr('INESTABILIDAD · LA ESTRELLA PIERDE MASA', 'INSTABILITY · THE STAR SHEDS MASS'), this.star.position.clone().add(new THREE.Vector3(0, R * 2, 0)), '#ff6a4a', 16, 1.8);
       g.pipe.final.shockwave(this.star.position.clone(), 0.8, 1.2, 0.5);
       g.shake(0.4);
     }
@@ -406,27 +424,28 @@ export class StellarPhase extends Phase {
     // HUD
     const d = this.def;
     if (!this.iron) {
-      g.hud.setMass(formatSolar(this.mass), 'M☉', `núcleo: ${d.name.toLowerCase()} · ${d.coreTemp}`);
-      g.hud.setObjective(`Fusiona ${d.name.toLowerCase()} · ${Math.min(d.need, this.progress).toFixed(1)} / ${d.need}`, this.progress / d.need);
+      const name = pick(d.name).toLowerCase();
+      g.hud.setMass(formatSolar(this.mass), 'M☉', `${tr('núcleo', 'core')}: ${name} · ${coreTemp(d.coreTemp)}`);
+      g.hud.setObjective(`${tr('Fusiona', 'Fuse')} ${name} · ${num(Math.min(d.need, this.progress), 1)} / ${d.need}`, this.progress / d.need);
       g.hud.setMeters([
-        { id: 'stab', label: 'Estabilidad', value: this.stability, color: this.stability < 0.3 ? '#ff5a3c' : '#7dffb2', warn: this.stability < 0.3 },
+        { id: 'stab', label: tr('Estabilidad', 'Stability'), value: this.stability, color: this.stability < 0.3 ? '#ff5a3c' : '#7dffb2', warn: this.stability < 0.3 },
         { id: 'combo', label: 'Combo', value: Math.min(1, this.combo / 10), text: `×${this.combo}`, color: '#ffd36b' },
-        ...(this.el >= 2 ? [{ id: 'conv', label: 'Convección', value: this.convection, color: '#8fd3ff' }] : []),
+        ...(this.el >= 2 ? [{ id: 'conv', label: tr('Convección', 'Convection'), value: this.convection, color: '#8fd3ff' }] : []),
       ]);
       this.abilities([
-        { id: 'fuse', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Fusionar', active: input.primaryHeld },
-        { id: 'conv', key: input.touchMode ? 'BTN 2' : 'CLIC DER', name: 'Convección', locked: this.el < 2, active: this.slow, charge: this.convection },
+        { id: 'fuse', key: input.touchMode ? 'BTN' : tr('CLIC', 'CLICK'), name: tr('Fusionar', 'Fuse'), active: input.primaryHeld },
+        { id: 'conv', key: input.touchMode ? 'BTN 2' : tr('CLIC DER', 'R-CLICK'), name: tr('Convección', 'Convection'), locked: this.el < 2, active: this.slow, charge: this.convection },
       ]);
       g.audio.setIntensity(0.4 + this.el * 0.08 + Math.min(0.2, this.combo * 0.02));
     } else {
       const k = this.ironWave / IRON_WAVES;
-      g.hud.setMass(this.coreMass.toFixed(2), 'M☉ Fe', 'masa del núcleo de hierro · límite de Chandrasekhar 1,4');
-      g.hud.setObjective(`¡RESISTE EL COLAPSO! Onda ${this.ironWave} / ${IRON_WAVES}`, k);
+      g.hud.setMass(num(this.coreMass, 2), 'M☉ Fe', tr(`masa del núcleo de hierro · límite de Chandrasekhar ${num(1.4, 1)}`, `iron core mass · Chandrasekhar limit ${num(1.4, 1)}`));
+      g.hud.setObjective(`${tr('Resiste el colapso · onda', 'Hold back the collapse · wave')} ${this.ironWave} / ${IRON_WAVES}`, k);
       g.hud.setMeters([
-        { id: 'stab', label: 'Degeneración electrónica', value: this.stability, color: '#ff8a5a', warn: this.stability < 0.35 },
-        { id: 'core', label: 'Núcleo de hierro', value: clamp(this.coreMass / 1.4), text: `${this.coreMass.toFixed(2)} / 1,40`, color: '#ff5a3c', warn: this.coreMass > 1.3 },
+        { id: 'stab', label: tr('Degeneración electrónica', 'Electron degeneracy'), value: this.stability, color: '#ff8a5a', warn: this.stability < 0.35 },
+        { id: 'core', label: tr('Núcleo de hierro', 'Iron core'), value: clamp(this.coreMass / 1.4), text: `${num(this.coreMass, 2)} / ${num(1.4, 2)}`, color: '#ff5a3c', warn: this.coreMass > 1.3 },
       ]);
-      this.abilities([{ id: 'resist', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Resistir', active: input.primaryHeld }]);
+      this.abilities([{ id: 'resist', key: input.touchMode ? 'BTN' : tr('CLIC', 'CLICK'), name: tr('Resistir', 'Resist'), active: input.primaryHeld }]);
       g.audio.setIntensity(0.6 + k * 0.4);
     }
     this.drawOnion();
@@ -456,10 +475,18 @@ export class StellarPhase extends Phase {
     g.pipe.final.shockwave(this.star.position.clone(), 0.7, 1.4, 0.7);
     g.pipe.bloomBoost = 1.2;
     g.audio.ignite();
-    g.hud.titleCard(`${prev.sym} → ${d.sym}`, 'NUEVA CAPA DE FUSIÓN', `${d.name}: ${d.unlock}`, 3.6);
+    g.hud.titleCard(`${prev.sym} → ${d.sym}`, tr('NUEVA CAPA DE FUSIÓN', 'NEW FUSION LAYER'), `${pick(d.name)}: ${pick(d.unlock)}`, 3.6);
     if (this.el === 1) g.prog.discover('onion');
-    if (this.el === 2) this.tutorial('s4_conv', `Nuevo: mantén <kbd>${g.input.touchMode ? 'CONVECCIÓN' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para ralentizar el ritmo del núcleo. Se recarga con el tiempo.`, 8);
-    if (this.el === 3) g.hud.feel('La estrella se hincha: ahora es una supergigante.', 4);
+    if (this.el === 2)
+      this.tutorial(
+        's4_conv',
+        tr(
+          `Algo nuevo: mantén <kbd>${g.input.touchMode ? 'CONVECCIÓN' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para calmar el ritmo del núcleo. Se recarga con el tiempo.`,
+          `Something new: hold <kbd>${g.input.touchMode ? 'CONVECTION' : 'R-CLICK'}</kbd> (or <kbd>SHIFT</kbd>) to slow the core's rhythm. It recharges over time.`,
+        ),
+        8,
+      );
+    if (this.el === 3) g.hud.feel(tr('Me expando poco a poco: ahora soy una supergigante.', 'I slowly swell: now I am a supergiant.'), 4);
   }
 
   private async startIron() {
@@ -470,7 +497,7 @@ export class StellarPhase extends Phase {
     g.pipe.final.letterboxTarget = 1;
     g.audio.setEra('iron');
     g.sky.set(SKY_PRESETS.collapse, 3);
-    g.hud.titleCard('Hierro', 'EL NÚCLEO YA NO FUSIONA', 'Fusionar hierro consume energía en vez de liberarla', 4.5);
+    g.hud.titleCard(tr('Hierro', 'Iron'), tr('EL NÚCLEO YA NO PUEDE FUSIONAR', 'THE CORE CAN NO LONGER FUSE'), tr('Fusionar hierro consume energía en lugar de liberarla', 'Fusing iron consumes energy instead of releasing it'), 4.5);
     g.audio.thump(0.6);
     await this.wait(3);
     g.setStage(5);
@@ -483,7 +510,14 @@ export class StellarPhase extends Phase {
     this.stability = 1;
     this.cinematic = false;
     this.pausePulses = 1.2;
-    this.tutorial('s5_iron', `¡El núcleo colapsa! Ahora las ondas vienen <b>hacia dentro</b>. Pulsa <kbd>${g.input.touchMode ? 'RESISTIR' : 'CLIC'}</kbd> cuando toquen el núcleo para resistir. Cuanto mejor resistas, más masivo será tu núcleo.`, 9);
+    this.tutorial(
+      's5_iron',
+      tr(
+        `El núcleo empieza a colapsar. Ahora las ondas vienen <b>hacia dentro</b>: pulsa <kbd>${g.input.touchMode ? 'RESISTIR' : 'CLIC'}</kbd> cuando toquen el núcleo. Cuanto mejor resistas, más masivo será tu núcleo.`,
+        `The core is starting to collapse. Now the waves move <b>inward</b>: press <kbd>${g.input.touchMode ? 'RESIST' : 'CLICK'}</kbd> when they touch the core. The better you hold out, the more massive your core becomes.`,
+      ),
+      9,
+    );
   }
 
   private async endIron() {
@@ -492,7 +526,7 @@ export class StellarPhase extends Phase {
     const quality = clamp(this.ironScore / IRON_WAVES);
     if (this.ironMisses <= 1) g.prog.achieve('iron_will');
     this.rumble?.set(1, 1.2);
-    g.hud.titleCard('Límite superado', '1,4 MASAS SOLARES', 'La presión de degeneración cede', 2.5);
+    g.hud.titleCard(tr('Límite superado', 'Limit exceeded'), `${num(1.4, 1)} ${tr('MASAS SOLARES', 'SOLAR MASSES')}`, tr('La presión de degeneración ya no puede sostenerlo', 'Degeneracy pressure can no longer hold it up'), 2.5);
     await this.wait(2);
     this.rumble?.stop(0.2);
     g.pipe.final.pulse = 0;

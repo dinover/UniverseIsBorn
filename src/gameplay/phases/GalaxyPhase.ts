@@ -11,6 +11,8 @@ import type { LoopHandle } from '../../audio/AudioEngine';
 import type { Game } from '../../core/Game';
 import type { RunCarry } from '../../persistence/SaveSystem';
 import { SandboxMode } from '../sandbox/SandboxMode';
+import { stageDef } from '../../progression/Stages';
+import { tr } from '../../i18n/i18n';
 
 type GState = 'reveal' | 'feed' | 'grow1' | 'satellite' | 'grow2' | 'merger' | 'ending' | 'sandbox';
 
@@ -91,7 +93,7 @@ export class GalaxyPhase extends Phase {
   }
 
   touchLabels(): [string | null, string | null] {
-    return ['Canalizar', 'Jets'];
+    return [tr('Atraer', 'Draw in'), tr('Chorros', 'Jets')];
   }
 
   enter() {
@@ -204,21 +206,33 @@ export class GalaxyPhase extends Phase {
       if (k > 0.2) g.sky.set(SKY_PRESETS.intergalactic, 4);
       if (!said && k > 0.45) {
         said = true;
-        g.hud.titleCard('Supermasivo', 'ETAPA 14', 'Un millón de soles en el centro de una galaxia', 4.5);
+        g.hud.titleCard(stageDef(14).name, tr('ETAPA 14', 'STAGE 14'), tr('Un millón de soles en el corazón de una galaxia', 'A million suns at the heart of a galaxy'), 4.5);
       }
       await this.wait(0);
     }
-    g.hud.feel('¿ESO ES UNA GALAXIA?', 5);
+    g.hud.feel(tr('Y todas esas estrellas giran a mi alrededor.', 'And all those stars are turning around me.'), 5);
     g.prog.discover('galaxy');
     await this.wait(2);
     g.pipe.final.letterboxTarget = 0;
     this.cinematic = false;
     this.state = 'feed';
-    this.tutorial('g_feed', `Ahora dominas el centro. Las <b>nubes de gas</b> de los brazos están marcadas con <b>anillos</b>. ${g.input.touchMode ? 'Tócalas' : 'Haz <kbd>CLIC</kbd> cerca de una'} (o pulsa <kbd>${g.input.touchMode ? 'CANALIZAR' : 'ESPACIO'}</kbd>) para que caiga en espiral hacia ti. <kbd>${g.input.touchMode ? 'JETS' : 'CLIC DER'}</kbd> dispara los jets del cuásar.`, 11);
+    const touch = g.input.touchMode;
+    this.tutorial(
+      'g_feed',
+      tr(
+        `Ahora estás en el centro. Las <b>nubes de gas</b> de los brazos están marcadas con <b>anillos</b>. ${touch ? 'Toca una' : 'Haz <kbd>CLIC</kbd> cerca de una'} (o pulsa <kbd>${touch ? 'ATRAER' : 'ESPACIO'}</kbd>) para que caiga en espiral hacia ti. <kbd>${touch ? 'CHORROS' : 'CLIC DER'}</kbd> lanza los chorros del cuásar.`,
+        `You now sit at the center. The <b>gas clouds</b> in the arms are marked with <b>rings</b>. ${touch ? 'Tap one' : '<kbd>CLICK</kbd> near one'} (or press <kbd>${touch ? 'DRAW IN' : 'SPACE'}</kbd>) and it will spiral toward you. <kbd>${touch ? 'JETS' : 'R-CLICK'}</kbd> fires the quasar's jets.`,
+      ),
+      11,
+    );
   }
 
   help() {
     return this.sb ? this.sb.help() : false;
+  }
+
+  onLanguage() {
+    this.sb?.onLanguage();
   }
 
   debugSkip() {
@@ -274,7 +288,7 @@ export class GalaxyPhase extends Phase {
         ci.r *= 0.3;
         usedClick = true;
         g.audio.whoosh(0.25);
-        g.hud.floater('¡ATRAÍDO!', ci.pos.clone().add(new THREE.Vector3(0, 30, 0)), '#ffe0a0', 15, 1.2);
+        g.hud.floater(tr('¡EN CAMINO!', 'ON ITS WAY!'), ci.pos.clone().add(new THREE.Vector3(0, 30, 0)), '#ffe0a0', 15, 1.2);
       }
     }
     if (wantsChannel && !usedClick) {
@@ -286,7 +300,7 @@ export class GalaxyPhase extends Phase {
       if (target && this.cooldown <= 0) {
         this.channel(target);
       } else if (input.clicked) {
-        const msg = this.cooldown > 0 ? 'ESPERA UN INSTANTE…' : target ? '' : 'NO HAY NUBES AHÍ · BUSCA LOS ANILLOS';
+        const msg = this.cooldown > 0 ? tr('UN INSTANTE…', 'JUST A MOMENT…') : target ? '' : tr('NO HAY NUBES AHÍ · BUSCA LOS ANILLOS', 'NO CLOUDS THERE · LOOK FOR THE RINGS');
         if (msg) g.hud.floater(msg, input.pointerWorld.clone().add(new THREE.Vector3(0, 20, 0)), '#ffb0a0', 13, 1.2);
       }
     }
@@ -294,7 +308,14 @@ export class GalaxyPhase extends Phase {
       this.idleHint += dt;
       if (this.idleHint > 14) {
         this.idleHint = 0;
-        g.hud.hint(`Las nubes de gas están marcadas con <b>anillos</b> en los brazos. ${g.input.touchMode ? 'Tócalas' : 'Haz <kbd>CLIC</kbd> cerca de una'} (o pulsa <kbd>${g.input.touchMode ? 'CANALIZAR' : 'ESPACIO'}</kbd>) y caerá en espiral hacia ti.`, 8);
+        const touch = g.input.touchMode;
+        g.hud.hint(
+          tr(
+            `Las nubes de gas de los brazos están marcadas con <b>anillos</b>. ${touch ? 'Toca una' : 'Haz <kbd>CLIC</kbd> cerca de una'} (o pulsa <kbd>${touch ? 'ATRAER' : 'ESPACIO'}</kbd>) y caerá en espiral hacia ti.`,
+            `The gas clouds in the arms are marked with <b>rings</b>. ${touch ? 'Tap one' : '<kbd>CLICK</kbd> near one'} (or press <kbd>${touch ? 'DRAW IN' : 'SPACE'}</kbd>) and it will spiral toward you.`,
+          ),
+          8,
+        );
       }
     }
 
@@ -303,7 +324,7 @@ export class GalaxyPhase extends Phase {
     if (wantJet && !this.jetting) {
       this.jetLoop = this.jetLoop ?? g.audio.loopJet();
       g.audio.whoosh(0.25);
-      if (this.Q < 0.08) g.hud.floater('JETS DÉBILES · ALIMENTA EL NÚCLEO PARA CARGAR EL CUÁSAR', new THREE.Vector3(0, 120, 0), '#c9a8ff', 13, 2);
+      if (this.Q < 0.08) g.hud.floater(tr('CHORROS DÉBILES · ALIMENTA EL NÚCLEO PARA CARGAR EL CUÁSAR', 'WEAK JETS · FEED THE CORE TO CHARGE THE QUASAR'), new THREE.Vector3(0, 120, 0), '#c9a8ff', 13, 2);
     }
     this.jetting = wantJet || this.frenzy > 0;
     this.jetPower = damp(this.jetPower, this.jetting ? 0.35 + Math.min(1, this.Q * 2) * 0.65 : 0, 4, dt);
@@ -326,7 +347,15 @@ export class GalaxyPhase extends Phase {
     this.V = damp(this.V, clamp(alive / this.cloudN), 0.5, dt);
     this.gal.young = this.V;
     this.gal.brightness = 0.85 + this.V * 0.25 + this.frenzy * 0.3;
-    if (this.V < 0.35 && this.state !== 'reveal') this.tutorial('g_vital', 'Estás consumiendo el gas demasiado rápido: la <b>formación estelar</b> se apaga. Una galaxia viva también te alimenta. Deja que las nubes se regeneren.', 8);
+    if (this.V < 0.35 && this.state !== 'reveal')
+      this.tutorial(
+        'g_vital',
+        tr(
+          'Estás consumiendo el gas muy deprisa y la <b>formación estelar</b> se apaga. Una galaxia viva también te alimenta: deja que las nubes se regeneren.',
+          "You're using up the gas very quickly, and <b>star formation</b> is fading. A living galaxy also feeds you: let the clouds grow back.",
+        ),
+        8,
+      );
     this.regenT -= dt * (0.9 + this.V * 1.5) * (this.sb?.regenMul ?? 1);
     // A healthy galaxy feeds its nucleus steadily (stellar winds, gas recycling).
     if (this.sb) {
@@ -364,7 +393,7 @@ export class GalaxyPhase extends Phase {
     this.idleHint = 0;
     g.audio.whoosh(0.3);
     g.pipe.final.shockwave(c.pos.clone(), 0.35, 0.8, 0.25);
-    g.hud.floater('CANALIZANDO HACIA EL NÚCLEO', c.pos.clone().add(new THREE.Vector3(0, 30, 0)), '#9fd6ff', 14, 1.4);
+    g.hud.floater(tr('CAYENDO HACIA EL NÚCLEO', 'FALLING TOWARD THE CORE'), c.pos.clone().add(new THREE.Vector3(0, 30, 0)), '#9fd6ff', 14, 1.4);
     g.hud.clearHint();
   }
 
@@ -380,7 +409,15 @@ export class GalaxyPhase extends Phase {
     g.audio.capture(0.9);
     if (this.sb) this.sb.onCloud();
     else g.hud.floater(`+${formatSolar(c.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffd9a0', 16, 1.6);
-    if (this.Q > 0.75) this.tutorial('g_vent', `¡El cuásar se sobrecalienta! Mantén <kbd>${g.input.touchMode ? 'JETS' : 'CLIC DER'}</kbd> para liberar energía por los jets. Si llega al máximo, expulsará el gas de tu galaxia.`, 9);
+    if (this.Q > 0.75)
+      this.tutorial(
+        'g_vent',
+        tr(
+          `El cuásar se está sobrecalentando. Mantén <kbd>${g.input.touchMode ? 'CHORROS' : 'CLIC DER'}</kbd> para liberar energía por los chorros. Si llega al máximo, expulsará el gas de tu galaxia.`,
+          `The quasar is overheating. Hold <kbd>${g.input.touchMode ? 'JETS' : 'R-CLICK'}</kbd> to release energy through the jets. If it peaks, it will blow the gas out of your galaxy.`,
+        ),
+        9,
+      );
   }
 
   private outburst() {
@@ -394,8 +431,8 @@ export class GalaxyPhase extends Phase {
     g.shake(0.5);
     g.audio.boom();
     g.prog.discover('feedback');
-    if (this.sb) g.hud.toast('✺', 'El cuásar expulsó el gas', 'Perdiste nubes. Usa los jets antes de que llegue al máximo.');
-    else g.hud.titleCard('Retroalimentación', 'EL CUÁSAR EXPULSA EL GAS', 'Perdiste nubes: tu galaxia forma menos estrellas', 4);
+    if (this.sb) g.hud.toast('✺', tr('El cuásar expulsó el gas', 'The quasar blew the gas away'), tr('Se perdieron algunas nubes. Usa los chorros antes de que llegue al máximo.', 'Some clouds were lost. Use the jets before it peaks.'));
+    else g.hud.titleCard(tr('Retroalimentación', 'Feedback'), tr('EL CUÁSAR EXPULSA EL GAS', 'THE QUASAR BLOWS THE GAS AWAY'), tr('Se perdieron nubes: tu galaxia formará menos estrellas', 'Clouds were lost: your galaxy will form fewer stars'), 4);
   }
 
   private updateEvents(dt: number) {
@@ -415,14 +452,22 @@ export class GalaxyPhase extends Phase {
     if (this.eventT <= 0 && !this.clusterInfall) {
       this.eventT = this.sb ? this.sb.clusterInterval(() => this.rng.next()) : this.rng.range(35, 55);
       this.clusterInfall = { th: this.rng.range(0, TAU), r: this.gal.params.radius * 0.7, alive: true, mass: this.M * (this.sb ? 0.02 : 0.1), pos: new THREE.Vector3() };
-      if (!this.sb) g.hud.toast('✦', 'Cúmulo globular en caída', 'Cae hacia el centro. Haz clic sobre él para acelerarlo.');
+      if (!this.sb)
+        g.hud.toast(
+          '✦',
+          tr('Un cúmulo globular cae hacia ti', 'A globular cluster is falling in'),
+          g.input.touchMode ? tr('Se dirige al centro. Tócalo para acelerarlo.', "It's heading for the center. Tap it to speed it up.") : tr('Se dirige al centro. Haz clic sobre él para acelerarlo.', "It's heading for the center. Click it to speed it up."),
+        );
     }
     const ci = this.clusterInfall;
     if (ci) {
       ci.r -= dt * 22 * this.S;
       ci.th += dt * (40 / Math.max(ci.r, 30));
       ci.pos.set(Math.cos(ci.th) * ci.r, 20, Math.sin(ci.th) * ci.r);
-      if (this.sb && ci.r > 60) g.hud.marker('cluster', ci.pos.clone().add(new THREE.Vector3(0, 30 * this.S, 0)), `Cúmulo globular<div class="m">${g.input.touchMode ? 'tócalo' : 'clic'}: acelerar · da ✦</div>`, 'prey');
+      if (this.sb && ci.r > 60) {
+        const how = g.input.touchMode ? tr('tócalo', 'tap') : tr('haz clic', 'click');
+        g.hud.marker('cluster', ci.pos.clone().add(new THREE.Vector3(0, 30 * this.S, 0)), tr(`Cúmulo globular<div class="m">${how} para acelerarlo · da ✦</div>`, `Globular cluster<div class="m">${how} to speed it up · gives ✦</div>`), 'prey');
+      }
       if (ci.r < 15) {
         this.M += ci.mass;
         g.bus.emit('massChanged', { mass: this.M });
@@ -430,7 +475,7 @@ export class GalaxyPhase extends Phase {
         g.audio.capture(1);
         g.pipe.final.shockwave(new THREE.Vector3(), 0.5, 1, 0.4);
         if (this.sb) this.sb.onCluster(new THREE.Vector3(0, 20, 0));
-        else g.hud.floater(`CÚMULO · +${formatSolar(ci.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffe0a0', 16, 1.8);
+        else g.hud.floater(`${tr('CÚMULO', 'CLUSTER')} · +${formatSolar(ci.mass)} M☉`, new THREE.Vector3(0, 60, 0), '#ffe0a0', 16, 1.8);
         this.clusterInfall = null;
       }
     }
@@ -443,8 +488,18 @@ export class GalaxyPhase extends Phase {
         if (this.feeds >= 3) {
           this.state = 'grow1';
           g.setStage(15);
-          g.hud.titleCard('Galaxia', 'ETAPA 15', 'Una simulación viva que sigue evolucionando', 4);
-          this.wait(4.5).then(() => { if (this.alive) g.hud.hint('Sigue canalizando nubes, pero vigila: <b>Actividad del cuásar</b> alta → mantén <kbd>' + (g.input.touchMode ? 'JETS' : 'CLIC DER') + '</kbd> para liberarla. <b>Formación estelar</b> alta → tu galaxia te alimenta sola. No te comas todo el gas de golpe.', 12); });
+          g.hud.titleCard(stageDef(15).name, tr('ETAPA 15', 'STAGE 15'), tr('Un sistema vivo que sigue evolucionando', 'A living system that keeps evolving'), 4);
+          this.wait(4.5).then(() => {
+            if (!this.alive) return;
+            const key = g.input.touchMode ? tr('CHORROS', 'JETS') : tr('CLIC DER', 'R-CLICK');
+            g.hud.hint(
+              tr(
+                `Sigue atrayendo nubes y presta atención a dos cosas: si la <b>actividad del cuásar</b> sube mucho, mantén <kbd>${key}</kbd> para liberarla; con la <b>formación estelar</b> alta, tu galaxia te alimenta sola. No consumas todo el gas de golpe.`,
+                `Keep drawing in clouds and watch two things: if <b>quasar activity</b> climbs high, hold <kbd>${key}</kbd> to release it; with high <b>star formation</b>, your galaxy feeds you on its own. Don't use up all the gas at once.`,
+              ),
+              12,
+            );
+          });
           this.persist(1);
         }
         break;
@@ -482,9 +537,15 @@ export class GalaxyPhase extends Phase {
     this.sat.orient.setFromMatrix4(new THREE.Matrix4().makeRotationX(0.6));
     this.group.add(this.sat);
     this.satT = 0;
-    g.hud.toast('◉', 'Galaxia satélite', 'Una galaxia enana cae hacia la tuya');
-    g.hud.titleCard('Galaxia satélite', 'EVENTO', 'Tu gravedad la está atrapando', 3.5);
-    this.tutorial('g_sat', `Cuando la galaxia enana esté cerca, ${g.input.touchMode ? 'tócala' : 'haz <kbd>CLIC</kbd> sobre ella'} para desgarrarla con tu marea.`, 8);
+    g.hud.toast('◉', tr('Galaxia satélite', 'Satellite galaxy'), tr('Una galaxia enana cae hacia la tuya', 'A dwarf galaxy is falling toward yours'));
+    g.hud.titleCard(tr('Galaxia satélite', 'Satellite galaxy'), tr('UNA VISITA', 'A VISITOR'), tr('Tu gravedad la está atrayendo', 'Your gravity is drawing it in'), 3.5);
+    this.tutorial(
+      'g_sat',
+      g.input.touchMode
+        ? tr('Cuando la galaxia enana esté cerca, tócala para atraerla con tu marea.', 'When the dwarf galaxy is close, tap it to draw it in with your tide.')
+        : tr('Cuando la galaxia enana esté cerca, haz <kbd>CLIC</kbd> sobre ella para atraerla con tu marea.', 'When the dwarf galaxy is close, <kbd>CLICK</kbd> on it to draw it in with your tide.'),
+      8,
+    );
   }
 
   private updateSatellite(dt: number) {
@@ -497,7 +558,10 @@ export class GalaxyPhase extends Phase {
     s.center.copy(this.satPos);
     s.update(this.t, g.pipe.renderer.getPixelRatio());
     const near = dist < 900;
-    if (near) g.hud.marker('sat', this.satPos.clone().add(new THREE.Vector3(0, 120, 0)), `Galaxia enana<div class="m">${this.satEaten > 0 ? 'desgarrándose' : 'haz clic'}</div>`, 'prey');
+    if (near) {
+      const sub = this.satEaten > 0 ? tr('uniéndose a ti', 'joining you') : g.input.touchMode ? tr('tócala', 'tap it') : tr('haz clic', 'click it');
+      g.hud.marker('sat', this.satPos.clone().add(new THREE.Vector3(0, 120, 0)), `${tr('Galaxia enana', 'Dwarf galaxy')}<div class="m">${sub}</div>`, 'prey');
+    }
     if (near && this.satEaten === 0 && g.input.clicked && Math.hypot(this.satPos.x - g.input.pointerWorld.x, this.satPos.z - g.input.pointerWorld.z) < 260) {
       this.satEaten = 0.0001;
       g.audio.whoosh(0.35);
@@ -518,7 +582,7 @@ export class GalaxyPhase extends Phase {
       this.sat = null;
       for (let i = 0; i < 4; i++) this.spawnCloud();
       this.state = 'grow2';
-      g.hud.titleCard('Canibalismo galáctico', 'SATÉLITE ABSORBIDO', 'Sus estrellas ahora forman un halo alrededor de tu galaxia', 4);
+      g.hud.titleCard(tr('Una nueva familia de estrellas', 'A new family of stars'), tr('LA GALAXIA SATÉLITE SE UNE A TI', 'THE SATELLITE GALAXY JOINS YOU'), tr('Sus estrellas forman ahora un halo alrededor de tu galaxia', 'Its stars now form a halo around your galaxy'), 4);
       g.prog.discover('merger');
       this.persist(2);
     }
@@ -536,7 +600,7 @@ export class GalaxyPhase extends Phase {
     this.compT = 0;
     g.pipe.final.letterboxTarget = 1;
     g.audio.swell(20);
-    g.hud.titleCard('Colisión galáctica', 'EL EVENTO FINAL', 'Otra galaxia, con su propio agujero negro supermasivo, viene hacia ti', 5);
+    g.hud.titleCard(tr('Encuentro galáctico', 'Galactic encounter'), tr('EL GRAN FINAL', 'THE GRAND FINALE'), tr('Otra galaxia, con su propio agujero negro supermasivo, viene a tu encuentro', 'Another galaxy, with its own supermassive black hole, is coming to meet you'), 5);
     g.rig.animate({ distance: 4200, pitch: 1.0, yaw: g.rig.state.yaw + 0.6 }, 6);
     g.prog.discover('merger');
   }
@@ -562,14 +626,21 @@ export class GalaxyPhase extends Phase {
     // The other supermassive black hole
     const rsC = 3 * Math.pow(this.compMass / this.M, 1 / 3);
     g.pipe.bhPass.rivals = dist > 10 ? [{ pos: pos.clone(), rs: rsC }] : [];
-    if (dist > 60) g.hud.marker('smbh2', pos.clone().add(new THREE.Vector3(0, 60, 0)), `Agujero negro supermasivo<div class="m">${formatSolar(this.compMass)} M☉</div>`, 'neutral');
+    if (dist > 60) g.hud.marker('smbh2', pos.clone().add(new THREE.Vector3(0, 60, 0)), `${tr('Agujero negro supermasivo', 'Supermassive black hole')}<div class="m">${formatSolar(this.compMass)} M☉</div>`, 'neutral');
     if (k > 0.25 && k < 0.3) g.rig.animate({ distance: 2400, pitch: 0.9 }, 8);
     if (k > 0.55 && !this.spin) {
       g.pipe.final.letterboxTarget = 0.6;
       this.cinematic = false;
       this.buildSpin();
       g.audio.chirp(T * 0.45);
-      this.tutorial('g_spin', `Los dos agujeros negros supermasivos se hunden hacia el centro. Alinea sus espines: pulsa <kbd>${g.input.touchMode ? 'CANALIZAR' : 'ESPACIO'}</kbd> cuando la aguja pase por la zona verde.`, 8);
+      this.tutorial(
+        'g_spin',
+        tr(
+          `Los dos agujeros negros supermasivos se hunden hacia el centro. Alinea sus espines: pulsa <kbd>${g.input.touchMode ? 'ATRAER' : 'ESPACIO'}</kbd> cuando la aguja pase por la zona verde.`,
+          `The two supermassive black holes sink toward the center. Align their spins: press <kbd>${g.input.touchMode ? 'DRAW IN' : 'SPACE'}</kbd> when the needle crosses the green zone.`,
+        ),
+        8,
+      );
     }
     if (this.spin) {
       const sp = this.spin;
@@ -598,7 +669,7 @@ export class GalaxyPhase extends Phase {
   }
 
   private buildSpin() {
-    const w = h('div', 'panel', `<div class="label" style="margin-bottom:6px">Alineación de espines</div>
+    const w = h('div', 'panel', `<div class="label" style="margin-bottom:6px">${tr('Alineación de espines', 'Spin alignment')}</div>
       <svg width="130" height="130" viewBox="-65 -65 130 130">
         <circle r="50" fill="none" stroke="rgba(200,220,255,0.25)" stroke-width="2"/>
         <path class="zone" fill="none" stroke="#7dffb2" stroke-width="8" stroke-linecap="round"/>
@@ -634,7 +705,7 @@ export class GalaxyPhase extends Phase {
     g.shake(1);
     g.audio.ringdown();
     g.audio.boom();
-    g.hud.titleCard('Un solo corazón', 'FUSIÓN DE SUPERMASIVOS', 'El gas de ambas galaxias cae en espiral: fase de cuásar', 5);
+    g.hud.titleCard(tr('Un solo corazón', 'One single heart'), tr('FUSIÓN DE SUPERMASIVOS', 'SUPERMASSIVE MERGER'), tr('El gas de ambas galaxias cae en espiral: comienza la fase de cuásar', 'Gas from both galaxies spirals inward: the quasar phase begins'), 5);
     for (let i = 0; i < 6; i++) this.spawnCloud();
     this.frenzy = 9;
     this.state = 'ending';
@@ -644,14 +715,14 @@ export class GalaxyPhase extends Phase {
 
   private async endGame() {
     const g = this.game;
-    g.hud.feel(`Mi agujero negro tiene ${formatSolar(this.M)} masas solares.`, 5);
+    g.hud.feel(tr(`Ahora guardo ${formatSolar(this.M)} masas solares en mi interior.`, `I now hold ${formatSolar(this.M)} solar masses within me.`), 5);
     await this.wait(4);
     // Final zoom out: the galaxy is one of many.
     g.sky.set(SKY_PRESETS.intergalactic, 3);
     this.buildWeb();
     g.prog.discover('cosmicweb');
     g.rig.animate({ distance: 90000, pitch: 1.1, yaw: g.rig.state.yaw + 0.8 }, 12, easeInOut);
-    g.hud.titleCard('La red cósmica', 'ZOOM OUT', 'Tu galaxia es un punto entre miles de millones', 6);
+    g.hud.titleCard(tr('La red cósmica', 'The cosmic web'), tr('MÁS ALLÁ DE TU GALAXIA', 'BEYOND YOUR GALAXY'), tr('Tu galaxia es un pequeño punto de luz entre miles de millones', 'Your galaxy is a tiny point of light among billions'), 6);
     await this.wait(12.5);
     const time = g.prog.run?.time ?? 0;
     g.finishRun();
@@ -828,26 +899,47 @@ export class GalaxyPhase extends Phase {
   private updateHud() {
     const g = this.game;
     if (this.sb) return this.sb.updateHud({ t: this.t, V: this.V, Q: this.Q, M: this.M, cloudHovered: !!this.hover }, this.jetting, this.cooldown);
-    g.hud.setMass(formatSolar(this.M), 'M☉', 'agujero negro supermasivo');
+    g.hud.setMass(formatSolar(this.M), 'M☉', tr('agujero negro supermasivo', 'supermassive black hole'));
+    const touch = g.input.touchMode;
+    const hot = touch
+      ? tr('El cuásar está al límite: mantén el botón 2 para liberar energía', 'The quasar is at its limit: hold button 2 to release energy')
+      : tr('El cuásar está al límite: mantén CLIC DERECHO para liberar energía', 'The quasar is at its limit: hold RIGHT CLICK to release energy');
     const obj: Record<GState, [string, number | null]> = {
       reveal: ['', null],
-      feed: [`${g.input.touchMode ? 'Toca una nube marcada' : 'Clic cerca de una nube marcada (o ESPACIO)'} para canalizarla · ${this.feeds}/3`, this.feeds / 3],
-      grow1: [this.Q > 0.75 ? '¡Cuásar al límite! Mantén CLIC DERECHO para liberar energía' : 'Canaliza nubes hasta 10 millones M☉ · no agotes el gas', clamp(Math.log(this.M / 1e6) / Math.log(GOAL1 / 1e6))],
-      satellite: [this.satEaten > 0 ? 'Desgarrando la galaxia satélite…' : this.satPos.length() < 900 ? '¡Haz clic sobre la galaxia enana (etiqueta verde)!' : 'Una galaxia enana se acerca… espera a que esté cerca', this.satEaten],
-      grow2: [this.Q > 0.75 ? '¡Cuásar al límite! Mantén CLIC DERECHO para liberar energía' : `Canaliza nubes hasta ${formatSolar(GOAL2)} M☉`, clamp(Math.log(this.M / GOAL1) / Math.log(GOAL2 / GOAL1))],
-      merger: [this.spin ? 'Pulsa ESPACIO cuando la aguja pase por la zona verde (' + this.spin.aligned + '/3)' : 'Colisión galáctica en curso…', clamp(this.compT / 26)],
-      ending: ['Fase de cuásar', null],
+      feed: [
+        `${touch ? tr('Toca una nube marcada para atraerla', 'Tap a marked cloud to draw it in') : tr('Haz clic cerca de una nube marcada (o pulsa ESPACIO) para atraerla', 'Click near a marked cloud (or press SPACE) to draw it in')} · ${this.feeds}/3`,
+        this.feeds / 3,
+      ],
+      grow1: [this.Q > 0.75 ? hot : tr('Atrae nubes hasta 10 millones de M☉ · sin agotar el gas', 'Draw in clouds up to 10 million M☉ · without using up the gas'), clamp(Math.log(this.M / 1e6) / Math.log(GOAL1 / 1e6))],
+      satellite: [
+        this.satEaten > 0
+          ? tr('La galaxia satélite se une a la tuya…', 'The satellite galaxy is joining yours…')
+          : this.satPos.length() < 900
+            ? touch
+              ? tr('Toca la galaxia enana (etiqueta verde)', 'Tap the dwarf galaxy (green label)')
+              : tr('Haz clic sobre la galaxia enana (etiqueta verde)', 'Click the dwarf galaxy (green label)')
+            : tr('Una galaxia enana se acerca… espera a que esté cerca', 'A dwarf galaxy is approaching… wait until it is close'),
+        this.satEaten,
+      ],
+      grow2: [this.Q > 0.75 ? hot : `${tr('Atrae nubes hasta', 'Draw in clouds up to')} ${formatSolar(GOAL2)} M☉`, clamp(Math.log(this.M / GOAL1) / Math.log(GOAL2 / GOAL1))],
+      merger: [
+        this.spin
+          ? `${touch ? tr('Pulsa el botón', 'Press the button') : tr('Pulsa ESPACIO', 'Press SPACE')} ${tr('cuando la aguja pase por la zona verde', 'when the needle crosses the green zone')} (${this.spin.aligned}/3)`
+          : tr('Encuentro galáctico en curso…', 'Galactic encounter in progress…'),
+        clamp(this.compT / 26),
+      ],
+      ending: [tr('Fase de cuásar', 'Quasar phase'), null],
       sandbox: ['', null],
     };
     const [txt, p] = obj[this.state];
     g.hud.setObjective(txt, p);
     g.hud.setMeters([
-      { id: 'q', label: 'Actividad del cuásar', value: this.Q, color: this.Q > 0.8 ? '#ff5a3c' : '#c9a8ff', warn: this.Q > 0.85 },
-      { id: 'v', label: 'Formación estelar', value: this.V, color: '#8fd3ff', warn: this.V < 0.3 },
+      { id: 'q', label: tr('Actividad del cuásar', 'Quasar activity'), value: this.Q, color: this.Q > 0.8 ? '#ff5a3c' : '#c9a8ff', warn: this.Q > 0.85 },
+      { id: 'v', label: tr('Formación estelar', 'Star formation'), value: this.V, color: '#8fd3ff', warn: this.V < 0.3 },
     ]);
     this.abilities([
-      { id: 'feed', key: g.input.touchMode ? 'TOCAR' : 'CLIC / ESPACIO', name: 'Canalizar nube', charge: 1 - this.cooldown },
-      { id: 'jets', key: g.input.touchMode ? 'BTN 2' : 'CLIC DER', name: 'Jets · liberar energía', active: this.jetting },
+      { id: 'feed', key: touch ? tr('TOCAR', 'TAP') : tr('CLIC / ESPACIO', 'CLICK / SPACE'), name: tr('Atraer nube', 'Draw in cloud'), charge: 1 - this.cooldown },
+      { id: 'jets', key: touch ? 'BTN 2' : tr('CLIC DER', 'R-CLICK'), name: tr('Chorros · liberar energía', 'Jets · release energy'), active: this.jetting },
     ]);
     g.audio.setIntensity(0.35 + this.Q * 0.4 + (this.state === 'merger' ? 0.3 : 0));
   }

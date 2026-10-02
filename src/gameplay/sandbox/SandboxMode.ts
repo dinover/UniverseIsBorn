@@ -11,6 +11,7 @@ import { MAX_VISIBLE, SandboxDecor } from './Decor';
 import { ShopUi, fmtRate } from './ShopUi';
 import { MINIGAMES, Observatory } from './Observatory';
 import { OBS_ENERGY_MAX } from './Economy';
+import { tr } from '../../i18n/i18n';
 
 export interface SandboxHost {
   gal: GalaxyField;
@@ -76,7 +77,7 @@ export class SandboxMode {
     this.applyLook(true);
 
     const hud = game.hud;
-    this.btn = h('button', 'sb-shopbtn interactive', `<span class="i">✦</span>Tienda<kbd>T</kbd><em class="badge"></em>`) as HTMLButtonElement;
+    this.btn = h('button', 'sb-shopbtn interactive', `<span class="i">✦</span><span class="t"></span><kbd>T</kbd><em class="badge"></em>`) as HTMLButtonElement;
     this.badge = this.btn.querySelector('.badge') as HTMLElement;
     this.btn.addEventListener('click', () => {
       this.btn.blur();
@@ -93,7 +94,7 @@ export class SandboxMode {
     });
     this.seenReveal = this.revealSignature();
 
-    this.obsBtn = h('button', 'sb-obsbtn interactive', `<span class="i">◎</span>Observatorio<kbd>O</kbd><em class="badge"></em>`) as HTMLButtonElement;
+    this.obsBtn = h('button', 'sb-obsbtn interactive', `<span class="i">◎</span><span class="t"></span><kbd>O</kbd><em class="badge"></em>`) as HTMLButtonElement;
     this.obsBadge = this.obsBtn.querySelector('.badge') as HTMLElement;
     this.obsBtn.addEventListener('click', () => {
       this.obsBtn.blur();
@@ -115,6 +116,7 @@ export class SandboxMode {
       setBusy: (v) => host.setBusy(v),
       onClosed: () => this.shop.refresh(),
     });
+    this.onLanguage();
 
     this.onKey = (e: KeyboardEvent) => {
       if (this.game.mode !== 'playing') return;
@@ -147,6 +149,14 @@ export class SandboxMode {
     return SANDBOX_VIEW * Math.pow(this.eco.scale, 0.9);
   }
 
+  /** Button labels and panels built once: rewritten after a language change. */
+  onLanguage() {
+    (this.btn.querySelector('.t') as HTMLElement).textContent = tr('Tienda', 'Shop');
+    (this.obsBtn.querySelector('.t') as HTMLElement).textContent = tr('Observatorio', 'Observatory');
+    this.shop.onLanguage();
+    this.obs.onLanguage();
+  }
+
   /** Called once the phase is visible: welcome, offline earnings, first-time briefing. */
   async enter(phaseWait: (s: number) => Promise<void>) {
     const g = this.game;
@@ -155,12 +165,20 @@ export class SandboxMode {
     const away = (Date.now() - this.state.savedAt) / 1000;
     await phaseWait(1.6);
     if (first) {
-      g.hud.titleCard('Modo libre', 'TU GALAXIA', 'Llénala de estrellas y nebulosas a tu gusto', 4.5);
+      g.hud.titleCard(tr('Modo libre', 'Free mode'), tr('TU GALAXIA', 'YOUR GALAXY'), tr('Llénala de estrellas y nebulosas a tu gusto', 'Fill it with stars and nebulae, just the way you like'), 4.5);
     } else if (away > 60) {
       const off = this.eco.offline(away);
       if (off.amount >= 1) {
         this.earn(off.amount);
-        g.hud.titleCard(`+${formatBig(off.amount)} ✦`, 'MIENTRAS NO ESTABAS', `Tu galaxia siguió brillando durante ${formatTime(Math.min(away, off.cap))}${off.capped ? ' (máximo)' : ''}`, 4.5);
+        g.hud.titleCard(
+          `+${formatBig(off.amount)} ✦`,
+          tr('MIENTRAS NO ESTABAS', 'WHILE YOU WERE AWAY'),
+          tr(
+            `Tu galaxia siguió brillando durante ${formatTime(Math.min(away, off.cap))}${off.capped ? ' (máximo)' : ''}`,
+            `Your galaxy kept shining for ${formatTime(Math.min(away, off.cap))}${off.capped ? ' (maximum)' : ''}`,
+          ),
+          4.5,
+        );
         g.audio.achievement();
       }
     }
@@ -261,7 +279,7 @@ export class SandboxMode {
     if (!this.eco.buyUpgrade(id)) return false;
     const def = upgradeById(id)!;
     this.game.audio.discovery();
-    this.game.hud.toast(def.icon, `${def.name} · nivel ${this.eco.up(id)}`, def.effect);
+    this.game.hud.toast(def.icon, `${def.name} · ${tr('nivel', 'level')} ${this.eco.up(id)}`, def.effect);
     this.save();
     return true;
   }
@@ -317,7 +335,12 @@ export class SandboxMode {
     this.level = L;
     const g = this.game;
     const bonus = Math.round((this.eco.scale - 1) * 100);
-    g.hud.titleCard(`Nivel ${L}`, 'TU GALAXIA CRECIÓ', `Radio +${bonus}% · producción +${Math.round(5 * (L - 1))}% · más zoom`, 3.5);
+    g.hud.titleCard(
+      `${tr('Nivel', 'Level')} ${L}`,
+      tr('TU GALAXIA HA CRECIDO', 'YOUR GALAXY HAS GROWN'),
+      tr(`Radio +${bonus}% · producción +${Math.round(5 * (L - 1))}% · más zoom`, `Radius +${bonus}% · production +${Math.round(5 * (L - 1))}% · more zoom`),
+      3.5,
+    );
     g.pipe.final.shockwave(new THREE.Vector3(), 1, 2.2, 1.4);
     g.pipe.bloomBoost = 1.2;
     g.audio.swell(4);
@@ -326,7 +349,7 @@ export class SandboxMode {
     // Growing also refreshes your observing energy and may open a new minigame.
     this.obs.addEnergy(1);
     const fresh = MINIGAMES.filter((m) => m.level > prev && m.level <= L);
-    for (const m of fresh) g.hud.toast(m.icon, `Nuevo minijuego: ${m.name}`, 'Te espera en el Observatorio (O)');
+    for (const m of fresh) g.hud.toast(m.icon, `${tr('Nuevo minijuego', 'New minigame')}: ${m.name}`, tr('Te espera en el Observatorio (O)', 'Waiting for you in the Observatory (O)'));
     if (fresh.length) this.obsBtn.classList.add('pulse');
     if (L >= 10) g.prog.achieve('sb_level10');
     if (L >= 20) g.prog.achieve('sb_level20');
@@ -406,7 +429,10 @@ export class SandboxMode {
     if (!best) return;
     const def = astroById(best.id)!;
     const n = this.eco.count(def.id);
-    const sub = def.kind === 'star' ? `${n} en tu galaxia · +${fmtRate(def.prod! * n)} ✦/s` : `+${Math.round(def.boost! * 100 * n)}% producción`;
+    const sub =
+      def.kind === 'star'
+        ? `${n} ${tr('en tu galaxia', 'in your galaxy')} · +${fmtRate(def.prod! * n)} ✦/s`
+        : `+${Math.round(def.boost! * 100 * n)}% ${tr('de producción', 'production')}`;
     g.hud.marker('sb-hover', best.pos.clone().add(new THREE.Vector3(0, 30 * this.S, 0)), `${def.name}<div class="m">${sub}</div>`, 'neutral');
   }
 
@@ -428,25 +454,25 @@ export class SandboxMode {
     const e = this.eco;
     const L = e.level;
     const touch = g.input.touchMode;
-    g.hud.setModePlate('MODO LIBRE', `Nivel ${L}`, `≈ ${Math.round(40 * this.S * this.S)} mil millones de estrellas`);
-    g.hud.setMass(formatBig(e.s.dust), '✦', `+${fmtRate(this.rateNow)} polvo estelar/s`);
+    g.hud.setModePlate(tr('MODO LIBRE', 'FREE MODE'), `${tr('Nivel', 'Level')} ${L}`, `≈ ${Math.round(40 * this.S * this.S)} ${tr('mil millones de estrellas', 'billion stars')}`);
+    g.hud.setMass(formatBig(e.s.dust), '✦', `+${fmtRate(this.rateNow)} ${tr('polvo estelar/s', 'stardust/s')}`);
     const nothing = e.astrosOwned === 0;
     g.hud.setObjective(
       nothing
-        ? `Abre la TIENDA ${touch ? '(botón ✦)' : '(T)'} y compra tu primera estrella`
-        : `Nivel ${L + 1}: invierte ${formatBig(e.toNextLevel)} ✦ más en astros`,
+        ? tr(`Abre la TIENDA ${touch ? '(botón ✦)' : '(T)'} y elige tu primera estrella`, `Open the SHOP ${touch ? '(✦ button)' : '(T)'} and choose your first star`)
+        : tr(`Nivel ${L + 1}: invierte ${formatBig(e.toNextLevel)} ✦ más en astros`, `Level ${L + 1}: invest ${formatBig(e.toNextLevel)} ✦ more in celestial bodies`),
       nothing ? clamp(e.s.dust / 20) : e.levelProgress,
     );
     const lg = Math.log10(Math.max(1, snap.M));
     g.hud.setMeters([
-      { id: 'q', label: 'Actividad del cuásar', value: snap.Q, color: snap.Q > 0.8 ? '#ff5a3c' : '#c9a8ff', warn: snap.Q > 0.85 },
-      { id: 'v', label: 'Formación estelar', value: snap.V, color: '#8fd3ff', warn: snap.V < 0.3 },
-      { id: 'm', label: 'Agujero negro', value: lg - Math.floor(lg), text: `${formatSolar(snap.M)} M☉`, color: '#ffd6a0' },
+      { id: 'q', label: tr('Actividad del cuásar', 'Quasar activity'), value: snap.Q, color: snap.Q > 0.8 ? '#ff5a3c' : '#c9a8ff', warn: snap.Q > 0.85 },
+      { id: 'v', label: tr('Formación estelar', 'Star formation'), value: snap.V, color: '#8fd3ff', warn: snap.V < 0.3 },
+      { id: 'm', label: tr('Agujero negro', 'Black hole'), value: lg - Math.floor(lg), text: `${formatSolar(snap.M)} M☉`, color: '#ffd6a0' },
     ]);
     g.hud.setAbilities([
-      { id: 'feed', key: touch ? 'TOCAR' : 'CLIC / ESPACIO', name: 'Canalizar nube', charge: 1 - cooldown },
-      { id: 'jets', key: touch ? 'BTN 2' : 'CLIC DER', name: 'Jets del cuásar', active: jetting },
-      { id: 'shop', key: touch ? '✦' : 'T', name: 'Tienda', active: this.shop.isOpen },
+      { id: 'feed', key: touch ? tr('TOCAR', 'TAP') : tr('CLIC / ESPACIO', 'CLICK / SPACE'), name: tr('Atraer nube', 'Draw in cloud'), charge: 1 - cooldown },
+      { id: 'jets', key: touch ? 'BTN 2' : tr('CLIC DER', 'R-CLICK'), name: tr('Chorros del cuásar', 'Quasar jets'), active: jetting },
+      { id: 'shop', key: touch ? '✦' : 'T', name: tr('Tienda', 'Shop'), active: this.shop.isOpen },
     ]);
     g.audio.setIntensity(0.25 + snap.Q * 0.3);
   }
