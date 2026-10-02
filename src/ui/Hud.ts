@@ -150,12 +150,33 @@ export class Hud {
 
   setStage(n: number) {
     this.stage = n;
+    this.plateKey = '';
     const def = stageDef(n);
     const [a, b] = ACCENTS[n] ?? ACCENTS[1];
     document.documentElement.style.setProperty('--accent', a);
     document.documentElement.style.setProperty('--accent-2', b);
     const track = STAGES.map((s) => `<i class="${s.n < n ? 'done' : s.n === n ? 'cur' : ''}"></i>`).join('');
     this.stageEl.innerHTML = `<div class="num">ETAPA ${String(n).padStart(2, '0')} / 15</div><div class="name">${def.name}</div><div class="track">${track}</div>`;
+  }
+
+  private plateKey = '';
+
+  /** Replaces the stage plate with a custom one (free mode). `null` restores the stage. */
+  setModePlate(kicker: string | null, name = '', sub = '') {
+    if (kicker === null) {
+      this.plateKey = '';
+      this.setStage(this.stage);
+      return;
+    }
+    const key = `${kicker}|${name}|${sub}`;
+    if (key === this.plateKey) return;
+    if (!this.plateKey) {
+      const [a, b] = ACCENTS[15];
+      document.documentElement.style.setProperty('--accent', a);
+      document.documentElement.style.setProperty('--accent-2', b);
+    }
+    this.plateKey = key;
+    this.stageEl.innerHTML = `<div class="num">${kicker}</div><div class="name">${name}</div>${sub ? `<div class="sub">${sub}</div>` : ''}`;
   }
 
   setObjective(text: string, progress: number | null = null) {

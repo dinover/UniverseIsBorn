@@ -35,6 +35,7 @@ function boot() {
   game.register('neutron', (g, c) => new NeutronPhase(g, c));
   game.register('blackhole', (g, c) => new BlackHolePhase(g, c));
   game.register('galaxy', (g, c) => new GalaxyPhase(g, c));
+  game.register('sandbox', (g, c) => new GalaxyPhase(g, c, true));
   game.start();
   setTimeout(() => bootEl.classList.add('hide'), 400);
 }

@@ -76,6 +76,34 @@ export interface Stats {
   jetSeconds: number;
   runsCompleted: number;
   perfectHits: number;
+  stardust: number;
+}
+
+/** Customisable look of the free-mode galaxy. */
+export interface SandboxLook {
+  arms: number;
+  twist: string;
+  palette: string;
+  bar: boolean;
+  jets: string;
+}
+
+/** Free mode ("modo libre"): a persistent galaxy, independent from story runs. */
+export interface SandboxState {
+  version: 1;
+  seed: number;
+  mass: number;
+  dust: number;
+  /** Lifetime stardust earned. */
+  earned: number;
+  /** Stardust spent on stars & nebulae: drives the galaxy level (size, zoom, production). */
+  invested: number;
+  owned: Record<string, number>;
+  unlocked: Record<string, boolean>;
+  look: SandboxLook;
+  base: { arms: number; twist: number; ecc: number; bulge: number; hueShift: number };
+  time: number;
+  savedAt: number;
 }
 
 export interface MetaState {
@@ -90,9 +118,10 @@ export interface MetaState {
 
 const RUN_KEY = 'uib.run.v1';
 const META_KEY = 'uib.meta.v1';
+const SANDBOX_KEY = 'uib.sandbox.v1';
 
 export const defaultSettings = (): Settings => ({ quality: 'auto', music: 0.6, sfx: 0.8, educational: true, shake: true });
-export const defaultStats = (): Stats => ({ timePlayed: 0, particles: 0, starsDevoured: 0, captures: 0, bhMerged: 0, maxMass: 0, supernovae: 0, jetSeconds: 0, runsCompleted: 0, perfectHits: 0 });
+export const defaultStats = (): Stats => ({ timePlayed: 0, particles: 0, starsDevoured: 0, captures: 0, bhMerged: 0, maxMass: 0, supernovae: 0, jetSeconds: 0, runsCompleted: 0, perfectHits: 0, stardust: 0 });
 
 export class SaveSystem {
   constructor(private backend: SaveBackend = new LocalStorageBackend()) {}
@@ -126,5 +155,16 @@ export class SaveSystem {
 
   clearRun() {
     this.backend.remove(RUN_KEY);
+  }
+
+  loadSandbox(): SandboxState | null {
+    const s = this.backend.load<SandboxState>(SANDBOX_KEY);
+    if (!s || s.version !== 1) return null;
+    return s;
+  }
+
+  saveSandbox(s: SandboxState) {
+    s.savedAt = Date.now();
+    this.backend.save(SANDBOX_KEY, s);
   }
 }

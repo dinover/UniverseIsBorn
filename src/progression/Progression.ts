@@ -1,5 +1,5 @@
 import type { EventBus, GameEvents } from '../core/Events';
-import type { MetaState, RunState, SaveSystem, Stats } from '../persistence/SaveSystem';
+import type { MetaState, RunState, SandboxState, SaveSystem, Stats } from '../persistence/SaveSystem';
 import { CODEX } from './Codex';
 
 /** Owns meta-progression (achievements, codex, stats, settings) and the current run. */
@@ -72,6 +72,19 @@ export class Progression {
 
   loadRun() {
     return this.save.loadRun();
+  }
+
+  loadSandbox() {
+    return this.save.loadSandbox();
+  }
+
+  saveSandbox(s: SandboxState) {
+    this.save.saveSandbox(s);
+  }
+
+  /** Free mode unlocks once the story has been completed. */
+  get sandboxUnlocked() {
+    return this.meta.stats.runsCompleted > 0 || !!this.save.loadSandbox();
   }
 
   update(dt: number, playing: boolean) {

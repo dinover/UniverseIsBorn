@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Rng } from '../procgen/rng';
+import { smoothstep } from '../utils/math';
 
 export interface GalaxyParams {
   count: number;
@@ -34,6 +35,8 @@ uniform vec4 uTidal;
 uniform mat3 uOrient;
 uniform float uFade;
 uniform float uDark;
+uniform float uBar;
+uniform vec3 uTint;
 varying vec3 vColor;
 varying float vAlpha;
 
@@ -46,7 +49,20 @@ vec3 orbitPos(vec4 o){
   float e = uEcc * smoothstep(0.06, 0.3, a) * step(0.5, o.w);
   float r = rr * (1.0 + e * cos(uArms * (th - phi)));
   float thick = mix(0.32, 0.035, smoothstep(0.0, 0.22, a)) * uR * (o.w < 0.5 ? 1.0 : 0.55);
-  return vec3(cos(th) * r, o.z * thick, sin(th) * r);
+  vec3 p = vec3(cos(th) * r, o.z * thick, sin(th) * r);
+  if (uBar > 0.0){
+    // Barred spiral: the inner orbits stretch along a slowly rotating bar.
+    float k = uBar * (1.0 - smoothstep(0.06, 0.38, a));
+    float ba = log(0.38) * uTwist + uTime * uPattern;
+    float c = cos(ba);
+    float s = sin(ba);
+    vec2 q = vec2(c * p.x + s * p.z, -s * p.x + c * p.z);
+    q.x *= 1.0 + 1.1 * k;
+    q.y *= 1.0 - 0.6 * k;
+    p.x = c * q.x - s * q.y;
+    p.z = s * q.x + c * q.y;
+  }
+  return p;
 }
 
 void main(){
@@ -66,7 +82,7 @@ void main(){
   float young = step(1.5, aOrbit.w) * step(aOrbit.w, 2.5);
   float s = aSize * uSizeMul * (young > 0.5 ? mix(0.5, 1.0, uYoung) : 1.0);
   gl_PointSize = clamp(s * uPx * 900.0 / max(-mv.z, 1.0), 0.8, 90.0);
-  vColor = aColor * uBright * (young > 0.5 ? mix(0.3, 1.2, uYoung) : 1.0);
+  vColor = aColor * uTint * uBright * (young > 0.5 ? mix(0.3, 1.2, uYoung) : 1.0);
   vAlpha = uFade;
 }
 `;
@@ -164,6 +180,8 @@ export class GalaxyField extends THREE.Group {
       uOrient: { value: new THREE.Matrix3() },
       uFade: { value: 1 },
       uDark: { value: 0 },
+      uBar: { value: 0 },
+      uTint: { value: new THREE.Vector3(1, 1, 1) },
     });
     this.starMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms: uniforms(), transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, premultipliedAlpha: true });
     this.stars = new THREE.Points(geo, this.starMat);
@@ -218,7 +236,48 @@ export class GalaxyField extends THREE.Group {
     const r = rr * (1 + e * Math.cos(p.arms * (th - phi)));
     const thick = 0.035 * p.radius * 0.55;
     out.set(Math.cos(th) * r, height * thick, Math.sin(th) * r);
+    if (this.bar > 0) {
+      const k = this.bar * (1 - smoothstep(0.06, 0.38, a));
+      const ba = Math.log(0.38) * p.twist + time * p.pattern;
+      const c = Math.cos(ba);
+      const s = Math.sin(ba);
+      const qx = (c * out.x + s * out.z) * (1 + 1.1 * k);
+      const qz = (-s * out.x + c * out.z) * (1 - 0.6 * k);
+      out.x = c * qx - s * qz;
+      out.z = s * qx + c * qz;
+    }
     return out.applyMatrix3(this.orient).add(this.center);
+  }
+
+  private bar = 0;
+  private uniform(name: string, v: number) {
+    this.starMat.uniforms[name].value = v;
+    this.dustMat.uniforms[name].value = v;
+  }
+  setArms(n: number) {
+    this.params.arms = n;
+    this.uniform('uArms', n);
+  }
+  setTwist(t: number) {
+    this.params.twist = t;
+    this.uniform('uTwist', t);
+  }
+  setRadius(r: number) {
+    this.params.radius = r;
+    this.uniform('uR', r);
+  }
+  setBar(v: number) {
+    this.bar = v;
+    this.uniform('uBar', v);
+  }
+  setTint(r: number, g: number, b: number) {
+    this.starMat.uniforms.uTint.value.set(r, g, b);
+  }
+  /** Shows only a fraction of the stars (they are generated in random order). */
+  set visibleFraction(f: number) {
+    const k = Math.min(1, Math.max(0, f));
+    this.stars.geometry.setDrawRange(0, Math.floor(this.params.count * k));
+    this.dust.geometry.setDrawRange(0, Math.floor(this.params.count * 0.08 * k));
   }
 
   center = new THREE.Vector3();

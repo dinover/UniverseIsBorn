@@ -12,6 +12,15 @@ De un puñado de átomos en el universo oscuro a un agujero negro supermasivo en
 - Calidad gráfica Baja / Media / Alta / Automática, controles de teclado, mouse y táctiles.
 - Códice científico opcional, logros, estadísticas y guardado local.
 
+## Modo libre
+
+Al terminar el viaje se desbloquea el **modo libre**, accesible desde el menú principal cuando quieras. Es tu galaxia, persistente e independiente de las partidas de historia:
+
+- Genera **polvo estelar ✦** de forma pasiva (también mientras no juegas), canalizando nubes, liberando la energía del cuásar con los jets y atrapando cúmulos globulares.
+- Gástalo en la **tienda** (`T`): estrellas especiales que orbitan en tu galaxia (gigantes rojas, púlsares, magnetares, estrellas de Población III…), nebulosas que multiplican tu producción, mejoras y estilos (número de brazos, enrollamiento, paleta, barra central, color de los jets).
+- Lo invertido en estrellas y nebulosas sube el **nivel** de la galaxia: más grande, más estrellas, más zoom (al alejarte aparece la red cósmica) y +5% de producción por nivel.
+- Terminar otra partida de historia recompensa tu galaxia con polvo estelar extra.
+
 ## Controles
 
 | Acción | PC | Táctil |
@@ -21,6 +30,7 @@ De un puñado de átomos en el universo oscuro a un agujero negro supermasivo en
 | Habilidad secundaria | Clic derecho / Shift / E | Botón 2 |
 | Zoom | Rueda del mouse | — |
 | Pausa | Esc | Botón II |
+| Tienda (modo libre) | T | Botón ✦ Tienda |
 
 ## Desarrollo
 
@@ -30,7 +40,7 @@ npm run dev      # servidor local en http://localhost:5173
 npm run build    # build de producción en dist/
 ```
 
-Modo debug: `?debug&phase=blackhole&mass=6` salta a una fase (`primordial`, `cloud`, `protostar`, `stellar`, `supernova`, `neutron`, `blackhole`, `galaxy`). En debug, **N** salta la etapa y **M** suma masa.
+Modo debug: `?debug&phase=blackhole&mass=6` salta a una fase (`primordial`, `cloud`, `protostar`, `stellar`, `supernova`, `neutron`, `blackhole`, `galaxy`, `sandbox`). En debug, **N** salta la etapa y **M** suma masa (en el modo libre, ambas suman polvo estelar).
 
 ## Publicación
 
