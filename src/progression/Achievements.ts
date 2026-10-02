@@ -34,6 +34,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'mg_memory10', title: 'Memoria cósmica', desc: 'Llega al nivel 10 en Memoria estelar.', icon: '♫' },
   { id: 'mg_constellations', title: 'Cartógrafo del cielo', desc: 'Completa las 12 constelaciones.', icon: '✧' },
   { id: 'mg_dwarf3', title: 'Caníbal galáctico', desc: 'Absorbe las tres galaxias enanas.', icon: '◉' },
+  { id: 'pomo_first', title: 'Foco estelar', desc: 'Completa tu primer pomodoro.', icon: '◷' },
+  { id: 'pomo_cycle', title: 'Órbita completa', desc: 'Completa un ciclo de pomodoros hasta la pausa larga.', icon: '◴' },
   { id: 'mg_slingshot', title: 'Asistencia gravitatoria', desc: 'Encadena dos asistencias con un mismo cometa.', icon: '☄' },
 ];
 

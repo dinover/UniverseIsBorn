@@ -77,6 +77,8 @@ export interface Stats {
   runsCompleted: number;
   perfectHits: number;
   stardust: number;
+  pomodoros: number;
+  focusMinutes: number;
 }
 
 /** Customisable look of the free-mode galaxy. */
@@ -134,7 +136,7 @@ const META_KEY = 'uib.meta.v1';
 const SANDBOX_KEY = 'uib.sandbox.v1';
 
 export const defaultSettings = (): Settings => ({ quality: 'auto', music: 0.6, sfx: 0.8, educational: true, shake: true });
-export const defaultStats = (): Stats => ({ timePlayed: 0, particles: 0, starsDevoured: 0, captures: 0, bhMerged: 0, maxMass: 0, supernovae: 0, jetSeconds: 0, runsCompleted: 0, perfectHits: 0, stardust: 0 });
+export const defaultStats = (): Stats => ({ timePlayed: 0, particles: 0, starsDevoured: 0, captures: 0, bhMerged: 0, maxMass: 0, supernovae: 0, jetSeconds: 0, runsCompleted: 0, perfectHits: 0, stardust: 0, pomodoros: 0, focusMinutes: 0 });
 
 export class SaveSystem {
   constructor(private backend: SaveBackend = new LocalStorageBackend()) {}

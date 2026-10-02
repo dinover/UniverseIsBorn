@@ -29,6 +29,15 @@ Al terminar el viaje se desbloquea el **modo libre**, accesible desde el menú p
   - **Honda gravitatoria**: lanza cometas, curva su trayectoria con la gravedad y recoge orbes; rozar el agujero negro multiplica.
 - Cada partida usa una carga de energía ◆ (5 máximo, +1 cada 8 minutos y al subir de nivel); sin energía se puede practicar al 20%. Las recompensas escalan con tu producción; hay récords, estrellas ★, logros y estilos exclusivos.
 
+## Modo Pomodoro (relax y estudio)
+
+Desde el menú principal, sin necesidad de haber jugado:
+
+- Una cinemática de un minuto recorre todas las eras (polvo → nube → protoestrella → estrella → supernova → agujero negro → galaxia). Se puede saltar.
+- Termina en la vista del observatorio, con la galaxia girando en el horizonte, donde se configura el foco, las pausas corta y larga, cada cuántos focos va la pausa larga, el encadenado automático, el viaje de cámara y los volúmenes.
+- Durante la sesión la pantalla queda limpia: un temporizador grande arriba a la izquierda, una cámara que viaja sola por la galaxia (órbitas, horizonte, brazos espirales, nacimientos de estrellas, supernovas suaves, nebulosas, el núcleo) y música ambiental. Las pausas son más cálidas y tranquilas, con campanas en cada cambio.
+- El tiempo también se ve en la pestaña del navegador y sigue corriendo aunque cambies de pestaña. `Espacio` pausa, `Esc` vuelve a los ajustes y los controles aparecen al mover el mouse.
+
 ## Controles
 
 | Acción | PC | Táctil |
@@ -49,7 +58,7 @@ npm run dev      # servidor local en http://localhost:5173
 npm run build    # build de producción en dist/
 ```
 
-Modo debug: `?debug&phase=blackhole&mass=6` salta a una fase (`primordial`, `cloud`, `protostar`, `stellar`, `supernova`, `neutron`, `blackhole`, `galaxy`, `sandbox`). En debug, **N** salta la etapa y **M** suma masa (en el modo libre, ambas suman polvo estelar).
+Modo debug: `?debug&phase=blackhole&mass=6` salta a una fase (`primordial`, `cloud`, `protostar`, `stellar`, `supernova`, `neutron`, `blackhole`, `galaxy`, `sandbox`, `pomodoro`). En debug, **N** salta la etapa y **M** suma masa (en el modo libre, ambas suman polvo estelar).
 
 ## Publicación
 

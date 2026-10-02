@@ -434,6 +434,22 @@ export class AudioEngine {
     if (strong) this.noise(0.08, { from: 1800, to: 300, gain: 0.05 });
   }
 
+  /** Gentle three-note bell (pomodoro transitions). */
+  chime(rising = true) {
+    const notes = rising ? [0, 4, 7] : [7, 4, 0];
+    notes.forEach((s, k) => {
+      const f = semi(523.25, s);
+      this.tone(f, 2.4, { type: 'sine', gain: 0.09, reverb: 1, delay: k * 0.32 });
+      this.tone(f * 2, 1.4, { gain: 0.025, reverb: 1, delay: k * 0.32 });
+    });
+  }
+
+  /** A distant, soft explosion: no jump scares while studying. */
+  softBoom() {
+    this.noise(4, { from: 2500, to: 60, gain: 0.12, attack: 0.05, reverb: 1.2 });
+    this.tone(48, 3.5, { to: 26, gain: 0.22, attack: 0.04 });
+  }
+
   /** Short wrong-answer buzz. */
   buzz() {
     this.tone(140, 0.35, { type: 'square', gain: 0.05, to: 90 });

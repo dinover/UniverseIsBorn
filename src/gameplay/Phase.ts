@@ -13,6 +13,10 @@ export abstract class Phase {
   alive = true;
   /** True while a scripted cinematic owns the camera/controls. */
   cinematic = false;
+  /** Whether the gameplay HUD is shown while this phase runs. */
+  showHud = true;
+  /** Keep running when the tab is hidden (e.g. a study timer) instead of auto-pausing. */
+  allowBackground = false;
   private waiters: { at: number; resolve: () => void }[] = [];
   private disposables: { dispose(): void }[] = [];
   abstract id: PhaseId;
