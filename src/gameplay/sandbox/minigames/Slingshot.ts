@@ -3,6 +3,7 @@ import { SpriteBatch } from '../../../vfx/SpriteBatch';
 import { Ring } from '../../../vfx/Effects';
 import { TAU } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { int, tr } from '../../../i18n/i18n';
 
 interface Body {
   x: number;
@@ -88,7 +89,14 @@ export class Slingshot extends Minigame {
     const yaw = g.rig.state.yaw - Math.round(g.rig.state.yaw / TAU) * TAU;
     g.rig.state.yaw = yaw;
     g.rig.animate({ distance: dist, pitch: 1.38, yaw: 0 }, 1.6);
-    c.hud.set({ title: '☄ Honda gravitatoria', progress: null, hint: 'Arrastra hacia atrás y suelta para lanzar el cometa · recoge los <b style="color:#ffd36b">orbes</b> · rozar el agujero negro sin caer = <b style="color:#c9a8ff">asistencia ×2</b>' });
+    c.hud.set({
+      title: `☄ ${tr('Honda gravitatoria', 'Gravity Slingshot')}`,
+      progress: null,
+      hint: tr(
+        'Arrastra hacia atrás y suelta para lanzar el cometa · recoge los <b style="color:#ffd36b">orbes</b> · pasar rozando el agujero negro sin caer = <b style="color:#c9a8ff">asistencia ×2</b>',
+        'Drag back and release to launch the comet · collect the <b style="color:#ffd36b">orbs</b> · skim past the black hole without falling in = <b style="color:#c9a8ff">assist ×2</b>',
+      ),
+    });
     this.newWave();
   }
 
@@ -136,7 +144,12 @@ export class Slingshot extends Minigame {
     for (const o of this.orbs) this.place(o.ring, o.x, o.z, 0.055);
     this.stage = 'between';
     this.stageT = 0;
-    this.ctx.hud.banner(`Oleada ${this.wave}`, `${this.orbs.length} orbes · ${this.wells.length} ${this.wells.length === 1 ? 'estrella masiva' : 'estrellas masivas'} · 3 cometas`, 1.5);
+    const w = this.wells.length;
+    this.ctx.hud.banner(
+      `${tr('Oleada', 'Wave')} ${this.wave}`,
+      tr(`${this.orbs.length} orbes · ${w} ${w === 1 ? 'estrella masiva' : 'estrellas masivas'} · 3 cometas`, `${this.orbs.length} orbs · ${w} ${w === 1 ? 'massive star' : 'massive stars'} · 3 comets`),
+      1.5,
+    );
   }
 
   private ringFor() {
@@ -236,7 +249,7 @@ export class Slingshot extends Minigame {
     if (why) this.ctx.hud.pop(why, s.x, s.y - 20, color, 17);
     if (this.shotOrbs >= 3) {
       this.score += 150 * (this.shotOrbs - 2);
-      this.ctx.hud.pop(`¡${this.shotOrbs} de un tiro! +${150 * (this.shotOrbs - 2)}`, window.innerWidth / 2, window.innerHeight * 0.35, '#ffe6a8', 20);
+      this.ctx.hud.pop(tr(`¡${this.shotOrbs} de un tiro! +${150 * (this.shotOrbs - 2)}`, `${this.shotOrbs} in one shot! +${150 * (this.shotOrbs - 2)}`), window.innerWidth / 2, window.innerHeight * 0.35, '#ffe6a8', 20);
     }
     this.stage = 'between';
     this.stageT = 0;
@@ -254,20 +267,20 @@ export class Slingshot extends Minigame {
         const bonus = 500 * this.wave + 150 * this.comets;
         this.score += bonus;
         g.audio.achievement();
-        c.hud.banner('¡Oleada limpia!', `+${bonus} pts`, 1.4);
+        c.hud.banner(tr('¡Oleada completa!', 'Wave cleared!'), `+${bonus} pts`, 1.4);
         this.newWave();
         this.stageT = -0.6;
       } else if (this.comets <= 0) {
         this.stage = 'over';
         this.stageT = 0;
-        c.hud.banner('Sin cometas', `Quedaron ${remaining} orbes`, 1.8);
+        c.hud.banner(tr('No quedan cometas', 'Out of comets'), tr(`Quedaron ${remaining} orbes`, `${remaining} orbs left`), 1.8);
       } else this.stage = 'aim';
     } else if (this.stage === 'fly') this.fly(dt);
     else if (this.stage === 'over' && this.stageT > 2) this.finish(false);
 
     this.render();
     c.hud.set({
-      score: `${this.score.toLocaleString('es')} pts`,
+      score: `${int(this.score)} pts`,
       combo: this.stage === 'fly' && this.mult > 1 ? `asistencia ×${this.mult}` : `oleada ${this.wave}`,
       timer: `☄ ${'●'.repeat(Math.max(0, this.comets))}${'○'.repeat(Math.max(0, 3 - this.comets))}`,
     });
@@ -288,7 +301,7 @@ export class Slingshot extends Minigame {
       if (rBH < BH.kill) {
         this.g.pipe.final.shockwave(new THREE.Vector3(), 0.5, 1, 0.3);
         this.g.audio.capture(1);
-        return this.endShot('¡Devorado!', '#ff9a6b');
+        return this.endShot(tr('Cayó en el agujero negro', 'Fell into the black hole'), '#ff9a6b');
       }
       // Gravity assist: dive inside the assist ring and come back out alive.
       if (rBH < ASSIST_R) this.assistArmed = true;
@@ -297,14 +310,14 @@ export class Slingshot extends Minigame {
         this.mult = Math.min(4, this.mult + 1);
         this.bestMult = Math.max(this.bestMult, this.mult);
         const s = this.project(new THREE.Vector3(this.cx * this.W, 6, this.cz * this.W));
-        hud.pop(`¡ASISTENCIA GRAVITATORIA! ×${this.mult}`, s.x, s.y - 30, '#c9a8ff', 18);
+        hud.pop(`${tr('¡ASISTENCIA GRAVITATORIA!', 'GRAVITY ASSIST!')} ×${this.mult}`, s.x, s.y - 30, '#c9a8ff', 18);
         this.g.audio.hit('perfect', this.mult * 2);
       }
       for (const w of this.wells) {
         if (Math.hypot(w.x - this.cx, w.z - this.cz) < w.kill) {
           this.g.pipe.final.shockwave(new THREE.Vector3(w.x * this.W, 6, w.z * this.W), 0.4, 0.8, 0.25);
           this.g.audio.thump(0.4);
-          return this.endShot('¡Choque!', '#ff8a8a');
+          return this.endShot(tr('Choque', 'Crash'), '#ff8a8a');
         }
       }
       for (const o of this.orbs) {
@@ -324,8 +337,8 @@ export class Slingshot extends Minigame {
     this.tail.push([this.cx, this.cz]);
     if (this.tail.length > 60) this.tail.shift();
     if (this.bestMult >= 3) this.ctx.game.prog.achieve('mg_slingshot');
-    if (Math.hypot(this.cx, this.cz) > 1.7) return this.endShot('fuera', '#bfe0ff');
-    if (this.flyT > 9) return this.endShot('se disipó', '#bfe0ff');
+    if (Math.hypot(this.cx, this.cz) > 1.7) return this.endShot(tr('se alejó', 'drifted off'), '#bfe0ff');
+    if (this.flyT > 9) return this.endShot(tr('se disipó', 'faded away'), '#bfe0ff');
   }
 
   private render() {
@@ -389,7 +402,10 @@ export class Slingshot extends Minigame {
       score: this.score,
       stars: quit ? 0 : this.starsFor(this.score, STARS),
       rewardSeconds: 30 + 330 * (1 - Math.exp(-this.score / 3000)),
-      lines: [`Orbes recogidos <b>${this.collected}</b> · oleadas superadas <b>${this.wave - 1}</b>`, `Mejor asistencia gravitatoria <b>×${this.bestMult}</b>`],
+      lines: [
+        tr(`Orbes recogidos <b>${this.collected}</b> · oleadas superadas <b>${this.wave - 1}</b>`, `Orbs collected <b>${this.collected}</b> · waves cleared <b>${this.wave - 1}</b>`),
+        `${tr('Mejor asistencia gravitatoria', 'Best gravity assist')} <b>×${this.bestMult}</b>`,
+      ],
       achievements: this.bestMult >= 3 ? ['mg_slingshot'] : [],
     };
   }

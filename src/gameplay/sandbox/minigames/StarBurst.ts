@@ -4,18 +4,21 @@ import { SpriteBatch } from '../../../vfx/SpriteBatch';
 import { Ring } from '../../../vfx/Effects';
 import { TAU, clamp, damp, easeInExpo, easeInOut, easeOutCubic } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { int, tr, withText, type Bi } from '../../../i18n/i18n';
 
 type Stage = 'intro' | 'play' | 'collapse' | 'boom';
 
+type ShellLook = Omit<StarLook, 'color' | 'hot'> & { color: [number, number, number]; hot: [number, number, number]; r: number };
+const shell = (sym: string, name: Bi, look: ShellLook) => withText({ sym, look }, { name });
 /** Core burning stages, from hydrogen to iron (the same chain as stage 4 of the story). */
-const SHELLS: { sym: string; name: string; look: Omit<StarLook, 'color' | 'hot'> & { color: [number, number, number]; hot: [number, number, number]; r: number } }[] = [
-  { sym: 'H', name: 'Hidrógeno', look: { color: [0.55, 0.65, 1], hot: [0.85, 0.92, 1], r: 7, granulation: 2, intensity: 1.4, spots: 0.1, boil: 0.8, rays: 0.6, coronaScale: 2.4, core: 0.5 } },
-  { sym: 'He', name: 'Helio', look: { color: [0.72, 0.76, 1], hot: [0.95, 0.95, 1], r: 6.6, granulation: 2, intensity: 1.5, spots: 0.15, boil: 1, rays: 0.7, coronaScale: 2.4, core: 1 } },
-  { sym: 'C', name: 'Carbono', look: { color: [1, 0.85, 0.6], hot: [1, 0.95, 0.8], r: 6.2, granulation: 1.8, intensity: 1.6, spots: 0.25, boil: 1.2, rays: 0.8, coronaScale: 2.3, core: 1.5 } },
-  { sym: 'O', name: 'Oxígeno', look: { color: [1, 0.7, 0.45], hot: [1, 0.88, 0.6], r: 5.8, granulation: 1.7, intensity: 1.7, spots: 0.35, boil: 1.4, rays: 0.9, coronaScale: 2.3, core: 2 } },
-  { sym: 'Ne', name: 'Neón', look: { color: [1, 0.55, 0.38], hot: [1, 0.78, 0.5], r: 5.4, granulation: 1.6, intensity: 1.8, spots: 0.45, boil: 1.7, rays: 1, coronaScale: 2.3, core: 2.5 } },
-  { sym: 'Si', name: 'Silicio', look: { color: [1, 0.45, 0.3], hot: [1, 0.7, 0.45], r: 5, granulation: 1.5, intensity: 1.9, spots: 0.55, boil: 2, rays: 1.1, coronaScale: 2.2, core: 3 } },
-  { sym: 'Fe', name: 'Hierro', look: { color: [0.9, 0.3, 0.22], hot: [1, 0.6, 0.4], r: 4.6, granulation: 1.4, intensity: 2.1, spots: 0.6, boil: 2.4, rays: 1.2, coronaScale: 2.2, core: 3.5 } },
+const SHELLS: { sym: string; name: string; look: ShellLook }[] = [
+  shell('H', { es: 'Hidrógeno', en: 'Hydrogen' }, { color: [0.55, 0.65, 1], hot: [0.85, 0.92, 1], r: 7, granulation: 2, intensity: 1.4, spots: 0.1, boil: 0.8, rays: 0.6, coronaScale: 2.4, core: 0.5 }),
+  shell('He', { es: 'Helio', en: 'Helium' }, { color: [0.72, 0.76, 1], hot: [0.95, 0.95, 1], r: 6.6, granulation: 2, intensity: 1.5, spots: 0.15, boil: 1, rays: 0.7, coronaScale: 2.4, core: 1 }),
+  shell('C', { es: 'Carbono', en: 'Carbon' }, { color: [1, 0.85, 0.6], hot: [1, 0.95, 0.8], r: 6.2, granulation: 1.8, intensity: 1.6, spots: 0.25, boil: 1.2, rays: 0.8, coronaScale: 2.3, core: 1.5 }),
+  shell('O', { es: 'Oxígeno', en: 'Oxygen' }, { color: [1, 0.7, 0.45], hot: [1, 0.88, 0.6], r: 5.8, granulation: 1.7, intensity: 1.7, spots: 0.35, boil: 1.4, rays: 0.9, coronaScale: 2.3, core: 2 }),
+  shell('Ne', { es: 'Neón', en: 'Neon' }, { color: [1, 0.55, 0.38], hot: [1, 0.78, 0.5], r: 5.4, granulation: 1.6, intensity: 1.8, spots: 0.45, boil: 1.7, rays: 1, coronaScale: 2.3, core: 2.5 }),
+  shell('Si', { es: 'Silicio', en: 'Silicon' }, { color: [1, 0.45, 0.3], hot: [1, 0.7, 0.45], r: 5, granulation: 1.5, intensity: 1.9, spots: 0.55, boil: 2, rays: 1.1, coronaScale: 2.2, core: 3 }),
+  shell('Fe', { es: 'Hierro', en: 'Iron' }, { color: [0.9, 0.3, 0.22], hot: [1, 0.6, 0.4], r: 4.6, granulation: 1.4, intensity: 2.1, spots: 0.6, boil: 2.4, rays: 1.2, coronaScale: 2.2, core: 3.5 }),
 ];
 
 const PERFECT = 0.075;
@@ -119,12 +122,12 @@ export class StarBurst extends Minigame {
     g.rig.target.copy(this.P);
     g.rig.animate({ distance: 70, pitch: 0.3 }, 2.8, easeInOut);
     g.audio.whoosh(0.3);
-    c.hud.set({ title: '✺ Estrella explosiva', score: '0 pts', combo: '', timer: '', progress: 0, hint: this.chain() });
-    c.hud.banner('Una estrella de tu galaxia', 'Comprime su núcleo al ritmo de sus latidos', 2.6);
+    c.hud.set({ title: `✺ ${tr('Estrella explosiva', 'Star Burst')}`, score: '0 pts', combo: '', timer: '', progress: 0, hint: this.chain() });
+    c.hud.banner(tr('Una estrella de tu galaxia', 'A star in your galaxy'), tr('Comprime su núcleo al ritmo de sus latidos', 'Compress its core to the rhythm of its heartbeat'), 2.6);
   }
 
   private chain() {
-    return SHELLS.map((s, i) => (i === this.shell ? `<b style="color:#ffd36b">${s.sym}</b>` : i < this.shell ? `<span style="opacity:.55">${s.sym}</span>` : s.sym)).join(' › ') + ' &nbsp;·&nbsp; pulsa <kbd>ESPACIO</kbd> / toca en cada latido';
+    return SHELLS.map((s, i) => (i === this.shell ? `<b style="color:#ffd36b">${s.sym}</b>` : i < this.shell ? `<span style="opacity:.55">${s.sym}</span>` : s.sym)).join(' › ') + tr(' &nbsp;·&nbsp; pulsa <kbd>ESPACIO</kbd> o toca en cada latido', ' &nbsp;·&nbsp; press <kbd>SPACE</kbd> or tap on each beat');
   }
 
   private beatTime(n: number) {
@@ -148,7 +151,7 @@ export class StarBurst extends Minigame {
     const dtb = now - this.beatTime(n);
     const ad = Math.abs(dtb);
     if (ad > GOOD) {
-      this.judge('miss', dtb < 0 ? 'ANTES DE TIEMPO' : 'TARDE');
+      this.judge('miss', dtb < 0 ? tr('ANTES DE TIEMPO', 'TOO EARLY') : tr('TARDE', 'TOO LATE'));
       // An off-beat press does not consume the next beat unless it was close.
       return;
     }
@@ -166,7 +169,7 @@ export class StarBurst extends Minigame {
       this.combo = 0;
       this.pressure = Math.max(0, this.pressure - 0.12);
       audio.hit('miss');
-      hud.pop(`✕ ${why || 'FUERA DE RITMO'}`, s.x, s.y + 90, '#ff8a8a', 16);
+      hud.pop(`✕ ${why || tr('FUERA DE RITMO', 'OFF BEAT')}`, s.x, s.y + 90, '#ff8a8a', 16);
       if (this.missRow >= 4) this.fail();
       return;
     }
@@ -181,7 +184,7 @@ export class StarBurst extends Minigame {
     this.pulse = q === 'perfect' ? 1.3 : 0.8;
     audio.hit(q, this.combo);
     this.g.shake(0.06 + this.shell * 0.02);
-    hud.pop(`${q === 'perfect' ? '¡PERFECTO!' : 'BIEN'} +${pts}`, s.x, s.y - 110, q === 'perfect' ? '#ffffff' : '#bfe0ff', q === 'perfect' ? 20 : 16);
+    hud.pop(`${q === 'perfect' ? tr('¡PERFECTO!', 'PERFECT!') : tr('BIEN', 'GOOD')} +${pts}`, s.x, s.y - 110, q === 'perfect' ? '#ffffff' : '#bfe0ff', q === 'perfect' ? 20 : 16);
     if (this.pressure >= 1) this.nextShell();
   }
 
@@ -191,7 +194,7 @@ export class StarBurst extends Minigame {
     if (this.shell >= SHELLS.length - 1) return this.collapse();
     this.shell++;
     const sh = SHELLS[this.shell];
-    hud.banner(`${sh.sym} · ${sh.name}`, this.shell === SHELLS.length - 1 ? '¡Hierro! Un último empujón…' : 'El núcleo se contrae y se calienta', 1.3);
+    hud.banner(`${sh.sym} · ${sh.name}`, this.shell === SHELLS.length - 1 ? tr('Hierro: un último empujón…', 'Iron: one last push…') : tr('El núcleo se contrae y se calienta', 'The core contracts and heats up'), 1.3);
     this.g.pipe.final.shockwave(this.P.clone(), 0.35, 1, 0.3);
     this.g.pipe.bloomBoost = 0.8;
     this.g.audio.discovery();
@@ -208,13 +211,13 @@ export class StarBurst extends Minigame {
     this.hyper = this.misses === 0;
     this.ring.opacity = 0;
     this.g.audio.collapseSuck(1.1);
-    this.ctx.hud.banner('¡COLAPSO!', 'El hierro ya no puede fusionarse', 1.2);
+    this.ctx.hud.banner(tr('Colapso', 'Collapse'), tr('El hierro ya no puede fusionarse', 'Iron can no longer fuse'), 1.2);
   }
 
   private fail() {
     this.failed = true;
     this.ring.opacity = 0;
-    this.ctx.hud.banner('Se estabilizó', 'Perdiste el ritmo: la estrella recuperó el equilibrio', 2);
+    this.ctx.hud.banner(tr('La estrella se calmó', 'The star settled down'), tr('Se perdió el ritmo y la estrella recuperó su equilibrio', 'The rhythm slipped away and the star found its balance again'), 2);
     this.g.audio.warning();
     this.stage = 'boom';
     this.stageT = 0;
@@ -234,7 +237,11 @@ export class StarBurst extends Minigame {
     g.rig.animate({ distance: this.hyper ? 420 : 300, pitch: 0.42 }, 4.5, easeOutCubic);
     g.prog.add('supernovae', 1);
     this.score += this.hyper ? 3000 : 1500;
-    this.ctx.hud.banner(this.hyper ? '¡HIPERNOVA!' : '¡SUPERNOVA!', this.hyper ? 'Ni un solo fallo: la explosión más brillante' : 'Por unas semanas brilla más que toda la galaxia', 3);
+    this.ctx.hud.banner(
+      this.hyper ? tr('¡HIPERNOVA!', 'HYPERNOVA!') : tr('¡SUPERNOVA!', 'SUPERNOVA!'),
+      this.hyper ? tr('Ni un solo fallo: la explosión más brillante', 'Not a single miss: the brightest explosion of all') : tr('Durante unas semanas brilla más que toda la galaxia', 'For a few weeks it outshines the whole galaxy'),
+      3,
+    );
   }
 
   protected step(dt: number) {
@@ -267,7 +274,7 @@ export class StarBurst extends Minigame {
       // A beat that went by unanswered counts as a miss.
       if (this.t - this.beatTime(this.lastJudged + 1) > GOOD && this.lastJudged + 1 >= 0 && this.t > this.beat0) {
         this.lastJudged++;
-        this.judge('miss', 'SIN PULSAR');
+        this.judge('miss', tr('LATIDO PERDIDO', 'MISSED BEAT'));
       }
       // Approach ring: reaches the limb exactly on the next beat.
       const nb = this.beatTime(this.lastJudged + 1);
@@ -308,9 +315,9 @@ export class StarBurst extends Minigame {
     this.renderEjecta();
 
     c.hud.set({
-      score: `${this.score.toLocaleString('es')} pts`,
+      score: `${int(this.score)} pts`,
       combo: this.combo >= 2 ? `combo ${this.combo}` : '',
-      timer: `Núcleo: ${SHELLS[this.shell].name}`,
+      timer: `${tr('Núcleo', 'Core')}: ${SHELLS[this.shell].name}`,
       progress: this.stage === 'play' ? this.pressure : this.stage === 'intro' ? 0 : 1,
     });
   }
@@ -363,8 +370,15 @@ export class StarBurst extends Minigame {
       stars,
       rewardSeconds: done ? 100 + this.score / 60 : this.shell * 12 + this.score / 90,
       lines: [
-        done ? (this.hyper ? '¡<b>Hipernova</b>! Ni un solo fallo' : 'La estrella estalló en <b>supernova</b>') : `Llegaste hasta el <b>${SHELLS[this.shell].name}</b>`,
-        `Perfectos <b>${this.perfects}</b> · buenos <b>${this.goods}</b> · fallos <b>${this.misses}</b> · combo máximo <b>${this.maxCombo}</b>`,
+        done
+          ? this.hyper
+            ? tr('¡<b>Hipernova</b>! Ni un solo fallo', '<b>Hypernova</b>! Not a single miss')
+            : tr('La estrella estalló en <b>supernova</b>', 'The star burst into a <b>supernova</b>')
+          : tr(`Llegaste hasta el <b>${SHELLS[this.shell].name.toLowerCase()}</b>`, `You made it to <b>${SHELLS[this.shell].name.toLowerCase()}</b>`),
+        tr(
+          `Perfectos <b>${this.perfects}</b> · buenos <b>${this.goods}</b> · fallos <b>${this.misses}</b> · mejor combo <b>${this.maxCombo}</b>`,
+          `Perfect <b>${this.perfects}</b> · good <b>${this.goods}</b> · misses <b>${this.misses}</b> · best combo <b>${this.maxCombo}</b>`,
+        ),
       ],
       achievements: this.hyper && done ? ['mg_hypernova'] : [],
       unlocks: this.hyper && done ? ['jets:hipernova'] : [],

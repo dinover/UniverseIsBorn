@@ -3,6 +3,7 @@ import type { Game } from '../../../core/Game';
 import type { ObsState } from '../../../persistence/SaveSystem';
 import type { GalaxyField } from '../../../vfx/GalaxyField';
 import { h } from '../../../ui/Hud';
+import { tr } from '../../../i18n/i18n';
 
 export interface MinigameResult {
   score: number;
@@ -60,7 +61,7 @@ export class MgHud {
     this.root = h('div', 'mg-ui');
     this.root.innerHTML = `
       <div class="mg-hud panel"><div class="mg-title"></div><div class="mg-stats"><span class="mg-score"></span><span class="mg-combo"></span><span class="mg-timer"></span></div><div class="mg-bar"><i></i></div></div>
-      <button class="mg-quit interactive" title="Salir del minijuego">✕</button>
+      <button class="mg-quit interactive">✕</button>
       <div class="mg-hint"></div>
       <div class="mg-banner"></div>`;
     parent.appendChild(this.root);
@@ -73,12 +74,17 @@ export class MgHud {
     this.hintEl = q('.mg-hint');
     this.bannerEl = q('.mg-banner');
     const quit = q('.mg-quit');
+    this.onLanguage();
     quit.addEventListener('pointerdown', (e) => e.stopPropagation());
     quit.addEventListener('click', (e) => {
       e.stopPropagation();
       (e.currentTarget as HTMLElement).blur();
       onQuit();
     });
+  }
+
+  onLanguage() {
+    (this.root.querySelector('.mg-quit') as HTMLElement).title = tr('Salir del minijuego', 'Leave the minigame');
   }
 
   set(o: { title?: string; score?: string; combo?: string; timer?: string; progress?: number | null; hint?: string }) {
@@ -107,7 +113,7 @@ export class MgHud {
     setTimeout(() => el.remove(), 1100);
   }
 
-  /** Big centred message (countdowns, "¡COLAPSO!", level up…). */
+  /** Big centred message (countdowns, level up…). */
   banner(big: string, small = '', seconds = 1.4) {
     this.bannerEl.innerHTML = `<b>${big}</b>${small ? `<small>${small}</small>` : ''}`;
     this.bannerEl.classList.remove('show');

@@ -1,6 +1,6 @@
 import type { EventBus, GameEvents } from '../core/Events';
 import type { MetaState, RunState, SandboxState, SaveSystem, Stats } from '../persistence/SaveSystem';
-import { CODEX } from './Codex';
+import { codexById } from './Codex';
 
 /** Owns meta-progression (achievements, codex, stats, settings) and the current run. */
 export class Progression {
@@ -21,7 +21,7 @@ export class Progression {
   }
 
   discover(id: string) {
-    if (!CODEX.some((c) => c.id === id)) return;
+    if (!codexById(id)) return;
     if (this.meta.codex[id]) return;
     this.meta.codex[id] = true;
     this.dirty = true;

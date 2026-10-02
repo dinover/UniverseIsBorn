@@ -1,8 +1,10 @@
 # Universe is Born
 
-De un puñado de átomos en el universo oscuro a un agujero negro supermasivo en el corazón de una galaxia. Un juego cósmico que corre en el navegador.
+De un puñado de átomos en el universo oscuro al corazón de una galaxia. Un viaje cósmico, tranquilo y educativo, que corre en el navegador.
 
-**15 etapas:** materia primordial → nube molecular → protoestrella → estrella masiva (H → He → C → O → Ne → Si) → núcleo de hierro → supernova → agujero negro → acreción → disco → jets → crecimiento → fusiones → agujero negro intermedio → supermasivo → galaxia.
+*From a handful of atoms in the dark universe to the heart of a galaxy: a calm, educational cosmic journey that runs in your browser. The whole game is available in English and Spanish.*
+
+**15 etapas:** materia primordial → nube molecular → protoestrella → estrella masiva (H → He → C → O → Ne → Si) → núcleo de hierro → supernova → agujero negro → acreción → disco → chorros relativistas → crecimiento → fusiones → agujero negro intermedio → supermasivo → galaxia.
 
 ## Características
 
@@ -11,13 +13,14 @@ De un puñado de átomos en el universo oscuro a un agujero negro supermasivo en
 - Gráficos y audio **100% procedurales** (shaders + WebAudio): sin assets externos ni licencias.
 - Calidad gráfica Baja / Media / Alta / Automática, controles de teclado, mouse y táctiles.
 - Códice científico opcional, logros, estadísticas y guardado local.
+- **Bilingüe: español e inglés.** El idioma se elige solo según el navegador y se puede cambiar en cualquier momento desde la pantalla de título (`ES · EN`) o en **Opciones**.
 
 ## Modo libre
 
 Al terminar el viaje se desbloquea el **modo libre**, accesible desde el menú principal cuando quieras. Es tu galaxia, persistente e independiente de las partidas de historia:
 
-- Genera **polvo estelar ✦** de forma pasiva (también mientras no juegas), canalizando nubes, liberando la energía del cuásar con los jets y atrapando cúmulos globulares.
-- Gástalo en la **tienda** (`T`): estrellas especiales que orbitan en tu galaxia (gigantes rojas, púlsares, magnetares, estrellas de Población III…), nebulosas que multiplican tu producción, mejoras y estilos (número de brazos, enrollamiento, paleta, barra central, color de los jets).
+- Genera **polvo estelar ✦** de forma pasiva (también mientras no juegas), atrayendo nubes, liberando la energía del cuásar con los chorros y atrapando cúmulos globulares.
+- Gástalo en la **tienda** (`T`): estrellas especiales que orbitan en tu galaxia (gigantes rojas, púlsares, magnetares, estrellas de Población III…), nebulosas que multiplican tu producción, mejoras y estilos (número de brazos, enrollamiento, paleta, barra central, color de los chorros).
 - Lo invertido en estrellas y nebulosas sube el **nivel** de la galaxia: más grande, más estrellas, más zoom (al alejarte aparece la red cósmica) y +5% de producción por nivel.
 - Terminar otra partida de historia recompensa tu galaxia con polvo estelar extra.
 - **Observatorio** (`O`): la cámara mira al cielo sobre tu galaxia, donde brillan tus constelaciones (solo se ven desde ahí). Seis minijuegos que se desbloquean al subir de nivel:
@@ -63,6 +66,10 @@ Modo debug: `?debug&phase=blackhole&mass=6` salta a una fase (`primordial`, `clo
 
 ## Publicación
 
-El workflow `.github/workflows/deploy.yml` compila y publica el juego en GitHub Pages en cada push a `main`. Activalo en **Settings → Pages → Source: GitHub Actions**.
+El workflow `.github/workflows/deploy.yml` compila y publica el juego en GitHub Pages en cada push a `main`. Actívalo en **Settings → Pages → Source: GitHub Actions**.
+
+## Idiomas
+
+Los textos viven junto al código que los usa, como pares `tr('español', 'English')` (o `{ es, en }` en las tablas de datos), en `src/i18n/i18n.ts`. Al cambiar de idioma, todo lo que se dibuja cada fotograma se actualiza solo y las pantallas construidas una vez se reconstruyen con `onLangChange`. Tono: cálido, neutro y sereno, pensado para aprender y relajarse.
 
 Stack: Vite + TypeScript + Three.js.

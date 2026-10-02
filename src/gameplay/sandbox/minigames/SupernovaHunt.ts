@@ -3,6 +3,7 @@ import { SpriteBatch } from '../../../vfx/SpriteBatch';
 import { Ring } from '../../../vfx/Effects';
 import { TAU, clamp, lerp } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { int, num, tr } from '../../../i18n/i18n';
 
 type Kind = 'normal' | 'gold' | 'stable';
 
@@ -58,8 +59,16 @@ export class SupernovaHunt extends Minigame {
     this.star.mesh.renderOrder = 12;
     c.group.add(this.glow.mesh, this.star.mesh);
     this.g.rig.animate({ distance: c.view * 0.95, pitch: 1.2 }, 1.4);
-    c.hud.set({ title: '✸ Lluvia de supernovas', progress: 1, hint: 'Toca cada estrella cuando el anillo la alcance · las <b style="color:#ffd36b">doradas</b> valen ×3 y suman tiempo · <b style="color:#8fb4ff">evita las azules estables</b>' });
-    c.hud.banner('¡Prepárate!', 'Atrapa las supernovas justo cuando estallan', LEAD);
+    const touch = c.game.input.touchMode;
+    c.hud.set({
+      title: `✸ ${tr('Lluvia de supernovas', 'Supernova Shower')}`,
+      progress: 1,
+      hint: tr(
+        `${touch ? 'Toca' : 'Haz clic en'} cada estrella cuando el anillo la alcance · las <b style="color:#ffd36b">doradas</b> valen ×3 y suman tiempo · <b style="color:#8fb4ff">deja tranquilas las azules estables</b>`,
+        `${touch ? 'Tap' : 'Click'} each star when the ring reaches it · <b style="color:#ffd36b">golden</b> ones are worth ×3 and add time · <b style="color:#8fb4ff">leave the steady blue ones alone</b>`,
+      ),
+    });
+    c.hud.banner(tr('¡Prepárate!', 'Get ready!'), tr('Atrapa las supernovas justo cuando estallan', 'Catch the supernovae right as they burst'), LEAD);
   }
 
   private get progress() {
@@ -136,7 +145,7 @@ export class SupernovaHunt extends Minigame {
       this.combo = 0;
       this.score = Math.max(0, this.score - 150);
       audio.buzz();
-      this.ctx.hud.pop('¡ESTABLE! −150', x, y - 20, '#8fb4ff', 18);
+      this.ctx.hud.pop(tr('ESTABLE −150', 'STEADY −150'), x, y - 20, '#8fb4ff', 18);
       return;
     }
     const ph = (this.t - hit.born) / hit.life;
@@ -152,7 +161,7 @@ export class SupernovaHunt extends Minigame {
     this.bursts.push({ pos: hit.pos.clone(), t: 0, gold: hit.kind === 'gold' });
     this.g.pipe.final.shockwave(hit.pos.clone(), q === 'perfect' ? 0.35 : 0.2, 0.8, 0.22);
     audio.hit(q === 'perfect' ? 'perfect' : 'good', this.combo);
-    const label = q === 'perfect' ? '¡PERFECTO!' : q === 'good' ? 'BIEN' : 'PRONTO';
+    const label = q === 'perfect' ? tr('¡PERFECTO!', 'PERFECT!') : q === 'good' ? tr('BIEN', 'GOOD') : tr('TEMPRANO', 'EARLY');
     const col = hit.kind === 'gold' ? '#ffd36b' : q === 'perfect' ? '#ffffff' : '#bfe0ff';
     this.ctx.hud.pop(`${label} +${pts}${hit.kind === 'gold' && this.end < DUR + 8 ? ' · +1 s' : ''}`, x, y - 24, col, q === 'perfect' ? 20 : 16);
   }
@@ -203,7 +212,7 @@ export class SupernovaHunt extends Minigame {
         this.miss++;
         if (this.combo >= 4) {
           const s = this.project(t.pos);
-          c.hud.pop('se apagó · combo perdido', s.x, s.y - 20, '#ff9a8a', 13);
+          c.hud.pop(tr('se apagó · combo perdido', 'faded · combo lost'), s.x, s.y - 20, '#ff9a8a', 13);
         }
         this.combo = 0;
         continue;
@@ -241,9 +250,9 @@ export class SupernovaHunt extends Minigame {
 
     const left = Math.max(0, LEAD + this.end - Math.max(this.t, LEAD));
     c.hud.set({
-      score: `${this.score.toLocaleString('es')} pts`,
-      combo: this.combo >= 2 ? `combo ${this.combo} · ×${this.mult().toFixed(2).replace(/\.?0+$/, '')}` : '',
-      timer: `${left.toFixed(1)} s`,
+      score: `${int(this.score)} pts`,
+      combo: this.combo >= 2 ? `combo ${this.combo} · ×${num(this.mult(), 2).replace(/[.,]?0+$/, '')}` : '',
+      timer: `${num(left, 1)} s`,
       progress: left / this.end,
     });
     if (!running && this.t >= LEAD && this.targets.length === 0) this.finish(false);
@@ -258,8 +267,11 @@ export class SupernovaHunt extends Minigame {
       // Saturating: great rounds pay well, but a flawless marathon cannot break the economy.
       rewardSeconds: (quit ? 0.5 : 1) * (40 + 300 * (1 - Math.exp(-this.score / 8000))),
       lines: [
-        `Perfectos <b>${this.perfect}</b> · buenos <b>${this.good}</b> · se apagaron <b>${this.miss}</b>${this.trapped ? ` · trampas <b>${this.trapped}</b>` : ''}`,
-        `Combo máximo <b>${this.maxCombo}</b>`,
+        tr(
+          `Perfectos <b>${this.perfect}</b> · buenos <b>${this.good}</b> · se apagaron <b>${this.miss}</b>${this.trapped ? ` · estables tocadas <b>${this.trapped}</b>` : ''}`,
+          `Perfect <b>${this.perfect}</b> · good <b>${this.good}</b> · faded <b>${this.miss}</b>${this.trapped ? ` · steady stars hit <b>${this.trapped}</b>` : ''}`,
+        ),
+        `${tr('Mejor combo', 'Best combo')} <b>${this.maxCombo}</b>`,
       ],
       achievements: stars >= 3 ? ['mg_supernova'] : [],
     };

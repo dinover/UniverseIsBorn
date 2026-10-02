@@ -6,6 +6,7 @@ import { StarBody } from '../../vfx/StarBody';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, damp, easeOutCubic } from '../../utils/math';
 import { TOV_LIMIT } from './SupernovaPhase';
+import { num, tr } from '../../i18n/i18n';
 
 /**
  * Branch — Neutron star. Too light to be a black hole... yet. Siphon matter from a companion
@@ -74,9 +75,21 @@ export class NeutronPhase extends Phase {
   private async script() {
     const g = this.game;
     await this.wait(1);
-    g.hud.titleCard('Estrella de neutrones', 'DESVÍO', 'Aún no tienes masa suficiente para ser un agujero negro', 4);
+    g.hud.titleCard(
+      tr('Estrella de neutrones', 'Neutron star'),
+      tr('UN DESVÍO EN EL CAMINO', 'A DETOUR ALONG THE WAY'),
+      tr('Todavía no tienes masa suficiente para ser un agujero negro', "You don't have enough mass to become a black hole yet"),
+      4,
+    );
     await this.wait(4.5);
-    this.tutorial('ns_roche', 'Tu estrella compañera tiene materia de sobra. Acércate a la <b>zona verde</b> para robarle gas por desbordamiento del lóbulo de Roche. No te acerques demasiado.', 9);
+    this.tutorial(
+      'ns_roche',
+      tr(
+        'Tu estrella compañera tiene materia de sobra. Acércate a la <b>zona verde</b> para atraer su gas a través del lóbulo de Roche, pero sin acercarte demasiado.',
+        "Your companion star has plenty of matter to spare. Move into the <b>green zone</b> to draw its gas through the Roche lobe, but don't get too close.",
+      ),
+      9,
+    );
   }
 
   debugSkip() {
@@ -101,7 +114,7 @@ export class NeutronPhase extends Phase {
       this.vel.set((P.x / 9.5) * 12, (P.z / 9.5) * 12);
       this.mass = Math.max(this.start, this.mass - 0.015);
       g.shake(0.2);
-      g.hud.floater('¡DEMASIADO CERCA!', P.clone().add(new THREE.Vector3(0, 3, 0)), '#ff6a4a', 14, 0.8);
+      g.hud.floater(tr('DEMASIADO CERCA', 'TOO CLOSE'), P.clone().add(new THREE.Vector3(0, 3, 0)), '#ff6a4a', 14, 0.8);
     }
     this.rate = this.cinematic ? 0 : clamp((24 - d) / 12) * (d > 9 ? 1 : 0);
     if (!this.done) this.mass += this.rate * 0.02 * dt;
@@ -120,7 +133,7 @@ export class NeutronPhase extends Phase {
         b.alive = false;
         this.mass += 0.06;
         g.audio.capture(0.2);
-        g.hud.floater('+0,06 M☉', new THREE.Vector3(b.x, 2, b.z), '#bfe8ff', 14);
+        g.hud.floater(`+${num(0.06, 2)} M☉`, new THREE.Vector3(b.x, 2, b.z), '#bfe8ff', 14);
       }
       if (Math.hypot(b.x, b.z) > 90) b.alive = false;
     }
@@ -167,9 +180,9 @@ export class NeutronPhase extends Phase {
     this.bandInner.tick(this.t, g.camera);
 
     const prog = (this.mass - this.start) / (TOV_LIMIT - this.start);
-    g.hud.setMass(this.mass.toFixed(2), 'M☉', 'estrella de neutrones · límite TOV ≈ 2,5');
-    g.hud.setObjective(this.done ? 'Colapso' : 'Roba masa a tu compañera hasta superar el límite TOV', prog);
-    g.hud.setMeters([{ id: 'rate', label: 'Transferencia de masa', value: this.rate, color: '#8fd3ff' }]);
+    g.hud.setMass(num(this.mass, 2), 'M☉', tr(`estrella de neutrones · límite TOV ≈ ${num(2.5, 1)}`, 'neutron star · TOV limit ≈ 2.5'));
+    g.hud.setObjective(this.done ? tr('Colapso', 'Collapse') : tr('Atrae gas de tu compañera hasta superar el límite TOV', 'Draw gas from your companion until you pass the TOV limit'), prog);
+    g.hud.setMeters([{ id: 'rate', label: tr('Transferencia de masa', 'Mass transfer'), value: this.rate, color: '#8fd3ff' }]);
     g.audio.setIntensity(0.3 + this.rate * 0.4);
     if (!this.cinematic) g.rig.target.set(P.x * 0.55, 0, P.z * 0.55);
 
@@ -184,7 +197,7 @@ export class NeutronPhase extends Phase {
     this.cinematic = true;
     g.prog.achieve('neutron_detour');
     g.pipe.final.letterboxTarget = 1;
-    g.hud.titleCard('Límite TOV superado', 'COLAPSO', 'Ni los neutrones pueden resistir', 3.5);
+    g.hud.titleCard(tr('Límite TOV superado', 'TOV limit exceeded'), tr('COLAPSO', 'COLLAPSE'), tr('Ni siquiera los neutrones pueden resistir', 'Not even neutrons can hold out'), 3.5);
     g.audio.collapseSuck(2);
     g.rig.target.copy(this.P);
     g.rig.animate({ distance: 26, pitch: 0.2 }, 2.5);

@@ -5,6 +5,7 @@ import { Ring } from '../../vfx/Effects';
 import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, damp, formatSolar, lerp, smoothstep } from '../../utils/math';
 import type { Rng } from '../../procgen/rng';
+import { num, tr } from '../../i18n/i18n';
 
 const R0 = 20;
 const T_MIN = 8;
@@ -78,7 +79,7 @@ export class CloudPhase extends Phase {
   private loss = 0;
 
   touchLabels(): [string | null, string | null] {
-    return ['Contraer', null];
+    return [tr('Contraer', 'Contract'), null];
   }
 
   enter() {
@@ -170,13 +171,27 @@ export class CloudPhase extends Phase {
   private async script() {
     const g = this.game;
     await this.wait(1);
-    g.hud.titleCard('Nube molecular', 'ETAPA 02', 'Gravedad contra dispersión', 3.5);
+    g.hud.titleCard(tr('Nube molecular', 'Molecular cloud'), tr('ETAPA 02', 'STAGE 02'), tr('El equilibrio entre gravedad y calor', 'The balance between gravity and heat'), 3.5);
     await this.wait(4);
-    this.tutorial('c2_compress', `Mantén <kbd>${g.input.touchMode ? 'CONTRAER' : 'CLIC'}</kbd> para <b>contraer</b> la nube. Comprimir calienta el gas: si te calientas demasiado, la materia se dispersa.`, 9);
+    this.tutorial(
+      'c2_compress',
+      tr(
+        `Mantén <kbd>${g.input.touchMode ? 'CONTRAER' : 'CLIC'}</kbd> para <b>contraer</b> la nube. Al comprimirse, el gas se calienta; si se calienta demasiado, la materia se dispersa.`,
+        `Hold <kbd>${g.input.touchMode ? 'CONTRACT' : 'CLICK'}</kbd> to <b>contract</b> the cloud. Compressing the gas warms it up; if it gets too hot, the matter drifts apart.`,
+      ),
+      9,
+    );
     await this.wait(10);
-    this.tutorial('c2_jeans', 'Para colapsar debes superar la <b>masa de Jeans</b>: más masa, más densidad y <b>menos temperatura</b>. Contrae con suavidad y deja enfriar.', 9);
+    this.tutorial(
+      'c2_jeans',
+      tr(
+        'Para colapsar, la nube debe superar la <b>masa de Jeans</b>: más masa, más densidad y <b>menos temperatura</b>. Contrae con suavidad y deja que se enfríe.',
+        'To collapse, the cloud must exceed the <b>Jeans mass</b>: more mass, more density and a <b>lower temperature</b>. Contract gently and let it cool.',
+      ),
+      9,
+    );
     await this.wait(10);
-    this.tutorial('c2_clumps', 'Absorbe otras nubes cercanas para ganar masa. Las nubes de polvo ayudan a enfriarte.', 7);
+    this.tutorial('c2_clumps', tr('Absorbe otras nubes cercanas para ganar masa. Las nubes de polvo te ayudan a enfriarte.', 'Absorb other nearby clouds to gain mass. Dust clouds help you cool down.'), 7);
   }
 
   debugSkip() {
@@ -284,8 +299,8 @@ export class CloudPhase extends Phase {
       this.loss += lostMass;
       if (this.loss > this.M0 * 0.01) {
         this.loss = 0;
-        g.hud.floater('DISPERSIÓN', C.clone().add(new THREE.Vector3(0, R * 0.8, 0)), '#ff9a7a', 13, 1.2);
-        this.tutorial('c2_hot', '¡Demasiado caliente! La presión está <b>dispersando</b> tu nube. Suelta y deja que se enfríe.', 6);
+        g.hud.floater(tr('DISPERSIÓN', 'DISPERSING'), C.clone().add(new THREE.Vector3(0, R * 0.8, 0)), '#ff9a7a', 13, 1.2);
+        this.tutorial('c2_hot', tr('Hace demasiado calor: la presión está <b>dispersando</b> tu nube. Suelta un momento y deja que se enfríe.', 'It is too hot: the pressure is <b>dispersing</b> your cloud. Let go for a moment and let it cool.'), 6);
       }
     }
 
@@ -295,18 +310,22 @@ export class CloudPhase extends Phase {
 
     // --- HUD
     const jPct = clamp(this.J / 1);
-    g.hud.setMass(formatSolar(this.M), 'M☉', `${Math.round(this.T)} K · radio ${(this.R * 0.5).toFixed(1)} pc`);
+    g.hud.setMass(formatSolar(this.M), 'M☉', `${Math.round(this.T)} K · ${tr('radio', 'radius')} ${num(this.R * 0.5, 1)} pc`);
     const ready = this.J >= 1;
     g.hud.setObjective(
-      this.done ? 'COLAPSO GRAVITACIONAL' : ready ? `¡Masa de Jeans superada! Mantén la nube estable… ${Math.ceil(Math.max(0, 3 - this.critT))}` : 'Supera la masa de Jeans: comprime sin sobrecalentarte',
+      this.done
+        ? tr('COLAPSO GRAVITACIONAL', 'GRAVITATIONAL COLLAPSE')
+        : ready
+          ? `${tr('¡Masa de Jeans superada! Mantén la nube estable…', 'Jeans mass exceeded! Keep the cloud steady…')} ${Math.ceil(Math.max(0, 3 - this.critT))}`
+          : tr('Supera la masa de Jeans comprimiendo sin sobrecalentarte', 'Exceed the Jeans mass by compressing without overheating'),
       ready ? this.critT / 3 : jPct,
     );
     g.hud.setMeters([
-      { id: 'jeans', label: 'Masa / masa de Jeans', value: jPct, text: `${(this.J * 100).toFixed(0)}%`, color: ready ? '#7dffb2' : '#c49bff' },
-      { id: 'temp', label: 'Temperatura', value: this.T / 60, text: `${this.T.toFixed(0)} K`, color: this.T > T_CRIT ? '#ff6a4a' : '#8fd3ff', warn: this.T > T_CRIT, zone: [T_MIN / 60, T_CRIT / 60] },
-      { id: 'dens', label: 'Compresión', value: this.c, color: '#ffb0f0' },
+      { id: 'jeans', label: tr('Masa / masa de Jeans', 'Mass / Jeans mass'), value: jPct, text: `${(this.J * 100).toFixed(0)}%`, color: ready ? '#7dffb2' : '#c49bff' },
+      { id: 'temp', label: tr('Temperatura', 'Temperature'), value: this.T / 60, text: `${this.T.toFixed(0)} K`, color: this.T > T_CRIT ? '#ff6a4a' : '#8fd3ff', warn: this.T > T_CRIT, zone: [T_MIN / 60, T_CRIT / 60] },
+      { id: 'dens', label: tr('Compresión', 'Compression'), value: this.c, color: '#ffb0f0' },
     ]);
-    this.abilities([{ id: 'compress', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Contraer', active: holding }]);
+    this.abilities([{ id: 'compress', key: input.touchMode ? 'BTN' : tr('CLIC', 'CLICK'), name: tr('Contraer', 'Contract'), active: holding }]);
     g.audio.setIntensity(0.25 + jPct * 0.4 + this.c * 0.15);
     if (!this.cinematic) {
       g.rig.target.set(C.x, 0, C.z);
@@ -351,7 +370,7 @@ export class CloudPhase extends Phase {
         this.M += cl.mass;
         if (cl.dust) {
           this.dustiness += 1;
-          g.hud.floater(`+${formatSolar(cl.mass)} M☉ · POLVO: MEJOR ENFRIAMIENTO`, new THREE.Vector3(cl.x, 5, cl.z), '#ffc6a0', 13, 1.8);
+          g.hud.floater(`+${formatSolar(cl.mass)} M☉ · ${tr('POLVO: TE ENFRÍAS MEJOR', 'DUST: YOU COOL MORE EASILY')}`, new THREE.Vector3(cl.x, 5, cl.z), '#ffc6a0', 13, 1.8);
         } else g.hud.floater(`+${formatSolar(cl.mass)} M☉`, new THREE.Vector3(cl.x, 5, cl.z), '#e5d0ff', 15, 1.4);
         g.audio.capture(0.4);
         g.prog.add('particles', count);
@@ -372,7 +391,7 @@ export class CloudPhase extends Phase {
       ring.mat.uniforms.uFill.value = 0.12;
       this.group.add(ring);
       this.shocks.push({ x: C.x + Math.cos(a) * 170, z: C.z + Math.sin(a) * 170, r: 0, speed: 38, hit: false, warned: false, ring });
-      g.hud.toast('✺', 'Supernova lejana', 'Una onda de choque se aproxima');
+      g.hud.toast('✺', tr('Supernova lejana', 'Distant supernova'), tr('Se acerca una onda de choque', 'A shock wave is on its way'));
       g.audio.warning();
     }
     for (const s of this.shocks) {
@@ -384,7 +403,14 @@ export class CloudPhase extends Phase {
       s.ring.tick(this.t, g.camera);
       if (!s.warned && d - s.r < 80) {
         s.warned = true;
-        this.tutorial('c2_shock', '¡Onda de choque! Si estás <b>contrayendo</b> cuando llegue, te comprimirá a tu favor. Si no, calentará y dispersará tu gas.', 7);
+        this.tutorial(
+          'c2_shock',
+          tr(
+            'Se acerca una onda de choque. Si estás <b>contrayendo</b> cuando llegue, te ayudará a comprimirte; si no, calentará y dispersará tu gas.',
+            'A shock wave is coming. If you are <b>contracting</b> when it arrives, it will help squeeze you together; if not, it will heat and scatter your gas.',
+          ),
+          7,
+        );
       }
       if (!s.hit && s.r >= d - this.R * 0.5) {
         s.hit = true;
@@ -396,7 +422,7 @@ export class CloudPhase extends Phase {
           this.R *= 0.72;
           this.M *= 1.06;
           this.T += 3;
-          g.hud.floater('¡COMPRESIÓN POR CHOQUE!', C.clone().add(new THREE.Vector3(0, 8, 0)), '#7dffb2', 17, 2);
+          g.hud.floater(tr('¡LA ONDA TE COMPRIME!', 'THE WAVE SQUEEZES YOU!'), C.clone().add(new THREE.Vector3(0, 8, 0)), '#7dffb2', 17, 2);
           g.audio.hit('perfect', 3);
         } else {
           this.T += 14;
@@ -404,7 +430,7 @@ export class CloudPhase extends Phase {
             this.vx[i] += dirx * 12;
             this.vz[i] += dirz * 12;
           }
-          g.hud.floater('CALENTAMIENTO POR CHOQUE', C.clone().add(new THREE.Vector3(0, 8, 0)), '#ff9a7a', 15, 1.8);
+          g.hud.floater(tr('LA ONDA TE CALIENTA', 'THE WAVE HEATS YOU'), C.clone().add(new THREE.Vector3(0, 8, 0)), '#ff9a7a', 15, 1.8);
           g.audio.thump(0.3);
         }
       }
@@ -510,7 +536,7 @@ export class CloudPhase extends Phase {
     this.cinematic = true;
     g.hud.clearHint();
     g.pipe.final.letterboxTarget = 1;
-    g.hud.titleCard('Colapso gravitacional', 'LA NUBE CEDE', '', 4);
+    g.hud.titleCard(tr('Colapso gravitacional', 'Gravitational collapse'), tr('LA NUBE SE RINDE A SU PROPIA GRAVEDAD', 'THE CLOUD GIVES IN TO ITS OWN GRAVITY'), '', 4);
     g.audio.swell(10);
     g.audio.collapseSuck(4.2);
     g.rig.animate({ distance: 22, pitch: 0.55, yaw: g.rig.state.yaw + 0.8 }, 4.8);

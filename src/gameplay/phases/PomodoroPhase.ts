@@ -6,14 +6,16 @@ import { IntroCinematic } from '../pomodoro/IntroCinematic';
 import { Director } from '../pomodoro/Director';
 import { PomodoroUi } from '../pomodoro/PomodoroUi';
 import { PomodoroTimer, loadPomo, savePomo, type PomoKind, type PomoSave } from '../pomodoro/PomodoroTimer';
+import { tr } from '../../i18n/i18n';
 
 type Mode = 'intro' | 'setup' | 'run';
 
-const ARRIVAL: Record<PomoKind, [string, string]> = {
-  focus: ['Foco', 'Un universo entero girando en silencio para ti'],
-  short: ['Pausa corta', 'Respira. Estira. Mira las estrellas.'],
-  long: ['Pausa larga', 'Te lo ganaste: date un paseo por la galaxia'],
-};
+const arrival = (k: PomoKind): [string, string] =>
+  k === 'focus'
+    ? [tr('Foco', 'Focus'), tr('Un universo entero girando en silencio para ti', 'A whole universe turning quietly, just for you')]
+    : k === 'short'
+      ? [tr('Pausa corta', 'Short break'), tr('Respira. Estírate. Mira las estrellas.', 'Breathe. Stretch. Look at the stars.')]
+      : [tr('Pausa larga', 'Long break'), tr('Te lo mereces: date un paseo por la galaxia', 'You deserve it: take a stroll through the galaxy')];
 
 /**
  * Pomodoro (relax & study). A one-minute cinematic through every era of the game ends
@@ -167,7 +169,13 @@ export class PomodoroPhase extends Phase {
     const g = this.game;
     const kind = this.timer.kind;
     if (bell) g.audio.chime(kind === 'focus');
-    if (this.timer.waiting) g.hud.titleCard(kind === 'focus' ? 'Pausa terminada' : '¡Bien hecho!', 'POMODORO', `Cuando quieras: ${kind === 'focus' ? 'comienza el foco' : 'comienza la pausa'} (ESPACIO)`, 6);
+    if (this.timer.waiting)
+      g.hud.titleCard(
+        kind === 'focus' ? tr('La pausa terminó', 'Break is over') : tr('¡Bien hecho!', 'Well done!'),
+        'POMODORO',
+        kind === 'focus' ? tr('Cuando quieras, comienza el foco (ESPACIO)', "Whenever you're ready, start your focus (SPACE)") : tr('Cuando quieras, comienza la pausa (ESPACIO)', "Whenever you're ready, start your break (SPACE)"),
+        6,
+      );
     else this.announce(kind);
     this.director.calm = kind !== 'focus';
     this.director.next();
@@ -177,9 +185,9 @@ export class PomodoroPhase extends Phase {
   }
 
   private announce(kind: PomoKind) {
-    const [big, sub] = ARRIVAL[kind];
+    const [big, sub] = arrival(kind);
     const min = this.timer.duration(kind) / 60;
-    this.game.hud.titleCard(big, `${min} MINUTOS`, sub, 4);
+    this.game.hud.titleCard(big, `${min} ${tr('MINUTOS', 'MINUTES')}`, sub, 4);
   }
 
   /** How the galaxy should look now: one more arm per pomodoro, maturing during each focus. */
@@ -193,8 +201,16 @@ export class PomodoroPhase extends Phase {
     this.living.update(dt, this.t, p, run && tm.kind !== 'focus');
     if (run) {
       const arms = this.living.arms;
-      this.ui.setGalaxy(tm.kind === 'focus' ? `✦ Tu galaxia: ${arms} brazos · madurando ${Math.floor(p * 100)}%` : `✦ Tu galaxia: ${arms} brazos · en calma`);
+      this.ui.setGalaxy(
+        tm.kind === 'focus'
+          ? tr(`✦ Tu galaxia: ${arms} brazos · madurando ${Math.floor(p * 100)}%`, `✦ Your galaxy: ${arms} arms · maturing ${Math.floor(p * 100)}%`)
+          : tr(`✦ Tu galaxia: ${arms} brazos · en calma`, `✦ Your galaxy: ${arms} arms · at rest`),
+      );
     }
+  }
+
+  onLanguage() {
+    this.ui.onLanguage();
   }
 
   update(dt: number) {

@@ -1,3 +1,5 @@
+import { getLang, int, num, tr } from '../i18n/i18n';
+
 export const TAU = Math.PI * 2;
 
 export const clamp = (v: number, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -24,10 +26,10 @@ export function angleLerp(a: number, b: number, t: number) {
 
 /** Human readable mass in solar masses with scientific flavour. */
 export function formatSolar(m: number): string {
-  if (m < 1000) return m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0);
-  if (m < 1e6) return (m / 1e3).toFixed(m < 1e4 ? 2 : 1) + ' mil';
-  if (m < 1e9) return (m / 1e6).toFixed(m < 1e7 ? 2 : 1) + ' millones';
-  return (m / 1e9).toFixed(2) + ' mil millones';
+  if (m < 1000) return num(m, m < 10 ? 2 : m < 100 ? 1 : 0);
+  if (m < 1e6) return num(m / 1e3, m < 1e4 ? 2 : 1) + tr(' mil', 'k');
+  if (m < 1e9) return num(m / 1e6, m < 1e7 ? 2 : 1) + tr(' millones', ' million');
+  return num(m / 1e9, 2) + tr(' mil millones', ' billion');
 }
 
 export function formatTime(sec: number): string {
@@ -39,12 +41,12 @@ export function formatTime(sec: number): string {
 }
 
 export function formatBig(n: number): string {
-  if (n < 1e4) return Math.round(n).toLocaleString('es');
-  const units = ['', 'mil', 'M', 'mil M', 'B'];
+  if (n < 1e4) return int(n);
+  const units = getLang() === 'en' ? ['', 'K', 'M', 'B', 'T'] : ['', 'mil', 'M', 'mil M', 'B'];
   let u = 0;
   while (n >= 1000 && u < units.length - 1) {
     n /= 1000;
     u++;
   }
-  return n.toFixed(1) + ' ' + units[u];
+  return num(n, 1) + ' ' + units[u];
 }

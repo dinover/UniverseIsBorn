@@ -18,6 +18,7 @@ import { codexById } from '../progression/Codex';
 import { achievementById } from '../progression/Achievements';
 import { SandboxEconomy, createSandboxState, randomGalaxyBase } from '../gameplay/sandbox/Economy';
 import type { GalaxyParams } from '../vfx/GalaxyField';
+import { onLangChange, saveLang, tr } from '../i18n/i18n';
 
 export type PhaseFactory = (game: Game, carry: RunCarry) => Phase;
 /** Everything that can own the scene: story phases, the title backdrop and free mode. */
@@ -91,6 +92,7 @@ export class Game {
       onSettings: (s) => this.applySettings(s),
       onResetProgress: () => {
         localStorage.clear();
+        saveLang(); // the chosen language survives the reset
         location.reload();
       },
     });
@@ -108,6 +110,7 @@ export class Game {
     uiRoot.appendChild(this.fpsEl);
     this.applySettings(settings);
     this.wireEvents();
+    onLangChange(() => this.refreshLanguage());
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.mode === 'playing' && !this.phase?.allowBackground) this.pause();
@@ -125,14 +128,15 @@ export class Game {
       if (!c || this.mode === 'title') return;
       this.audio.discovery();
       const edu = this.prog.meta.settings.educational;
-      this.hud.toast('❖', `Descubrimiento: ${c.title}`, edu ? 'Toca para leer · ' + c.question : '', edu ? () => this.openCodexEntry(id) : undefined);
+      const read = this.input.touchMode ? tr('Toca para leer', 'Tap to read') : tr('Haz clic para leer', 'Click to read');
+      this.hud.toast('❖', `${tr('Descubrimiento', 'Discovery')}: ${c.title}`, edu ? `${read} · ${c.question}` : '', edu ? () => this.openCodexEntry(id) : undefined);
       if (edu) this.hud.helpBtn.classList.add('pulse');
     });
     this.bus.on('achievement', ({ id }) => {
       const a = achievementById(id);
       if (!a) return;
       this.audio.achievement();
-      this.hud.toast(a.icon, `Logro: ${a.title}`, a.desc);
+      this.hud.toast(a.icon, `${tr('Logro', 'Achievement')}: ${a.title}`, a.desc);
     });
     this.bus.on('massChanged', ({ mass }) => {
       this.prog.max('maxMass', mass);
@@ -147,6 +151,17 @@ export class Game {
     if (s.quality !== this.quality.setting) this.quality.apply(s.quality);
     this.audio.setVolumes(s.music, s.sfx);
     this.shakeScale = s.shake ? 1 : 0;
+  }
+
+  /** Everything built once (menus, HUD plate, touch buttons, phase panels) follows the new language. */
+  private refreshLanguage() {
+    this.menus.refreshLanguage();
+    this.hud.refreshLanguage();
+    if (this.phase) {
+      const [p, s] = this.phase.touchLabels();
+      this.touch.setLabels(p, s);
+      this.phase.onLanguage();
+    }
   }
 
   shake(v: number) {

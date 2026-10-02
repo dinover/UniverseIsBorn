@@ -1,6 +1,7 @@
 import { h } from '../../../ui/Hud';
 import { TAU, clamp } from '../../../utils/math';
 import { Minigame } from './Minigame';
+import { int, tr } from '../../../i18n/i18n';
 import { CONSTELLATIONS, drawFigure, drawStar, placeFigure, type ConstellationDef } from './constellations';
 
 interface SkyStar {
@@ -70,16 +71,25 @@ export class ConstellationGame extends Minigame {
     const prev = h('canvas') as HTMLCanvasElement;
     prev.width = 150;
     prev.height = 110;
-    this.card.innerHTML = `<div class="label">${this.fresh ? 'Nueva constelación' : 'Repaso'}</div><b>${this.def.name}</b>`;
+    this.card.innerHTML = `<div class="label">${this.fresh ? tr('Nueva constelación', 'New constellation') : tr('Repaso', 'Review')}</div><b>${this.def.name}</b>`;
     this.card.appendChild(prev);
-    this.card.appendChild(h('small', '', `${this.def.pts.length} estrellas · ${this.def.edges.length} trazos`));
+    this.card.appendChild(h('small', '', `${this.def.pts.length} ${tr('estrellas', 'stars')} · ${this.def.edges.length} ${tr('trazos', 'lines')}`));
     const pg = prev.getContext('2d')!;
     drawFigure(pg, this.def, placeFigure(this.def, 75, 55, 86, 0), 1, false);
 
     this.layout();
     c.layer.classList.add('dim');
-    c.hud.set({ title: '✧ Constelaciones', combo: '', progress: 1, hint: `Encuentra <b>${this.def.name}</b> entre las estrellas y une sus puntos ${this.ctx.game.input.touchMode ? 'tocando una estrella y luego otra' : 'arrastrando de estrella a estrella'}` });
-    c.hud.banner(this.def.name, this.fresh ? 'Encuéntrala en el cielo y dibújala' : 'Ya es tuya: dibújala más rápido que nunca', 1.6);
+    const touch = this.ctx.game.input.touchMode;
+    c.hud.set({
+      title: `✧ ${tr('Constelaciones', 'Constellations')}`,
+      combo: '',
+      progress: 1,
+      hint: tr(
+        `Encuentra <b>${this.def.name}</b> entre las estrellas y une sus puntos ${touch ? 'tocando una estrella y luego otra' : 'arrastrando de estrella a estrella'}`,
+        `Find <b>${this.def.name}</b> among the stars and connect its points ${touch ? 'by tapping one star and then another' : 'by dragging from star to star'}`,
+      ),
+    });
+    c.hud.banner(this.def.name, this.fresh ? tr('Encuéntrala en el cielo y dibújala', 'Find it in the sky and draw it') : tr('Ya es tuya: dibújala con calma o más rápido que nunca', 'It is already yours: draw it calmly, or faster than ever'), 1.6);
   }
 
   /** Places the figure (rotated, scaled) and the decoy stars on the screen. */
@@ -210,14 +220,14 @@ export class ConstellationGame extends Minigame {
         this.stage = 'out';
         this.stageT = 0;
         this.g.audio.warning();
-        c.hud.banner('¡Se acabó el tiempo!', `Te faltaron ${this.want.size - this.drawn.size} trazos`, 2);
+        c.hud.banner(tr('Se acabó el tiempo', "Time's up"), tr(`Te faltaron ${this.want.size - this.drawn.size} trazos`, `${this.want.size - this.drawn.size} lines to go`), 2);
       }
     } else if (this.stageT > (this.stage === 'done' ? 3.4 : 2.2)) this.finish(false);
     this.bad = this.bad.filter((b) => (b.t -= dt) > 0);
     this.draw();
     c.hud.set({
-      score: `${this.score.toLocaleString('es')} pts`,
-      combo: `${this.drawn.size}/${this.want.size} trazos`,
+      score: `${int(this.score)} pts`,
+      combo: `${this.drawn.size}/${this.want.size} ${tr('trazos', 'lines')}`,
       timer: `${Math.ceil(this.left)} s`,
       progress: this.left / this.limit,
     });
@@ -297,8 +307,13 @@ export class ConstellationGame extends Minigame {
       stars,
       rewardSeconds: ok ? Math.max(40, 70 + this.left * 2 + (isNew ? 60 : 0) - this.mistakes * 5) : this.drawn.size * 6,
       lines: [
-        ok ? `Dibujaste <b>${this.def.name}</b>${isNew ? ' · <b style="color:#ffd36b">¡nueva en tu cielo!</b>' : ''}` : `${this.def.name}: <b>${this.drawn.size}/${this.want.size}</b> trazos`,
-        `Errores <b>${this.mistakes}</b> · tiempo sobrante <b>${Math.ceil(this.left)} s</b>`,
+        ok
+          ? tr(
+              `Dibujaste <b>${this.def.name}</b>${isNew ? ' · <b style="color:#ffd36b">¡nueva en tu cielo!</b>' : ''}`,
+              `You drew <b>${this.def.name}</b>${isNew ? ' · <b style="color:#ffd36b">new in your sky!</b>' : ''}`,
+            )
+          : `${this.def.name}: <b>${this.drawn.size}/${this.want.size}</b> ${tr('trazos', 'lines')}`,
+        tr(`Errores <b>${this.mistakes}</b> · tiempo sobrante <b>${Math.ceil(this.left)} s</b>`, `Mistakes <b>${this.mistakes}</b> · time left <b>${Math.ceil(this.left)} s</b>`),
         ok ? `<i>${this.def.fact}</i>` : '',
       ].filter(Boolean),
       constellation: isNew ? this.def.id : undefined,

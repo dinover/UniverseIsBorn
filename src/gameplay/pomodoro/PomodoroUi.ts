@@ -1,6 +1,7 @@
 import { h } from '../../ui/Hud';
 import type { Settings } from '../../persistence/SaveSystem';
-import { KIND_LABEL, type PomoSave, type PomoSettings, type PomodoroTimer } from './PomodoroTimer';
+import { kindLabel, type PomoSave, type PomoSettings, type PomodoroTimer } from './PomodoroTimer';
+import { tr } from '../../i18n/i18n';
 
 export interface PomoUiActions {
   start(): void;
@@ -45,7 +46,7 @@ export class PomodoroUi {
     this.timerEl = h('div', 'pomo-timer');
     this.timerEl.innerHTML = `<div class="l"></div><div class="t">25:00</div><div class="bar"><i></i></div><div class="dots"></div><div class="g"></div>`;
     this.ctrlEl = h('div', 'pomo-ctrl interactive');
-    this.skipEl = h('button', 'pomo-skip btn small', 'Saltar intro ⏭');
+    this.skipEl = h('button', 'pomo-skip btn small', tr('Saltar intro ⏭', 'Skip intro ⏭'));
     this.skipEl.addEventListener('click', () => {
       this.skipEl.blur();
       act.skipIntro();
@@ -55,6 +56,13 @@ export class PomodoroUi {
     window.addEventListener('pointermove', this.wake);
     window.addEventListener('pointerdown', this.wake);
     this.buildSetup();
+  }
+
+  onLanguage() {
+    this.skipEl.textContent = tr('Saltar intro ⏭', 'Skip intro ⏭');
+    if (this.root.dataset.mode === 'setup') this.buildSetup();
+    this.lastTitle = '';
+    this.refresh();
   }
 
   private wake = () => {
@@ -78,26 +86,36 @@ export class PomodoroUi {
     const vol = this.settings();
     const hasSession = this.root.dataset.session === '1';
     this.setupEl.innerHTML = `
-      <div class="label">Modo Pomodoro · relax y estudio</div>
-      <h2>Tu tiempo entre las estrellas</h2>
-      <div class="pomo-stats">Hoy: <b>${this.save.today}</b> ${this.save.today === 1 ? 'pomodoro' : 'pomodoros'} · <b>${this.save.todayMinutes}</b> min de foco</div>
-      <div class="pomo-row"><div class="label">Foco (min)</div>${this.chips('focus', FOCUS, '')}</div>
+      <div class="label">${tr('Modo Pomodoro · estudio y calma', 'Pomodoro mode · study and calm')}</div>
+      <h2>${tr('Tu tiempo entre las estrellas', 'Your time among the stars')}</h2>
+      <div class="pomo-stats">${tr(
+        `Hoy: <b>${this.save.today}</b> ${this.save.today === 1 ? 'pomodoro' : 'pomodoros'} · <b>${this.save.todayMinutes}</b> min de foco`,
+        `Today: <b>${this.save.today}</b> ${this.save.today === 1 ? 'pomodoro' : 'pomodoros'} · <b>${this.save.todayMinutes}</b> focus min`,
+      )}</div>
+      <div class="pomo-row"><div class="label">${tr('Foco (min)', 'Focus (min)')}</div>${this.chips('focus', FOCUS, '')}</div>
       <div class="pomo-grid">
-        <div><div class="label">Pausa corta (min)</div>${this.chips('short', SHORT, '')}</div>
-        <div><div class="label">Pausa larga (min)</div>${this.chips('long', LONG, '')}</div>
-        <div><div class="label">Larga cada (focos)</div>${this.chips('every', EVERY, '')}</div>
+        <div><div class="label">${tr('Pausa corta (min)', 'Short break (min)')}</div>${this.chips('short', SHORT, '')}</div>
+        <div><div class="label">${tr('Pausa larga (min)', 'Long break (min)')}</div>${this.chips('long', LONG, '')}</div>
+        <div><div class="label">${tr('Larga cada (focos)', 'Long one every (focus)')}</div>${this.chips('every', EVERY, '')}</div>
       </div>
       <div class="pomo-opts">
-        <label><button class="toggle${s.auto ? ' on' : ''}" data-t="auto"></button>Encadenar foco y pausas automáticamente</label>
-        <label><button class="toggle${s.travel ? ' on' : ''}" data-t="travel"></button>Viaje de cámara por la galaxia</label>
-        <label class="vol">Música <input type="range" min="0" max="1" step="0.05" value="${vol.music}" data-vol="music"></label>
-        <label class="vol">Campanas y efectos <input type="range" min="0" max="1" step="0.05" value="${vol.sfx}" data-vol="sfx"></label>
+        <label><button class="toggle${s.auto ? ' on' : ''}" data-t="auto"></button>${tr('Encadenar foco y pausas automáticamente', 'Chain focus and breaks automatically')}</label>
+        <label><button class="toggle${s.travel ? ' on' : ''}" data-t="travel"></button>${tr('Viaje de cámara por la galaxia', 'Camera journey through the galaxy')}</label>
+        <label class="vol">${tr('Música', 'Music')} <input type="range" min="0" max="1" step="0.05" value="${vol.music}" data-vol="music"></label>
+        <label class="vol">${tr('Campanas y efectos', 'Bells and effects')} <input type="range" min="0" max="1" step="0.05" value="${vol.sfx}" data-vol="sfx"></label>
       </div>
       <div class="actions">
-        ${hasSession ? '<button class="btn small primary" data-a="resume">Continuar sesión</button><button class="btn small" data-a="start">Nueva sesión</button>' : '<button class="btn small primary" data-a="start">Comenzar</button>'}
-        <button class="btn small" data-a="exit">Volver al menú</button>
+        ${
+          hasSession
+            ? `<button class="btn small primary" data-a="resume">${tr('Continuar sesión', 'Resume session')}</button><button class="btn small" data-a="start">${tr('Nueva sesión', 'New session')}</button>`
+            : `<button class="btn small primary" data-a="start">${tr('Comenzar', 'Start')}</button>`
+        }
+        <button class="btn small" data-a="exit">${tr('Volver al menú', 'Back to menu')}</button>
       </div>
-      <div class="pomo-tip">Durante la sesión: <kbd>ESPACIO</kbd> pausa · <kbd>ESC</kbd> ajustes · mueve el mouse para ver los controles</div>`;
+      <div class="pomo-tip">${tr(
+        'Durante la sesión: <kbd>ESPACIO</kbd> pausa · <kbd>ESC</kbd> ajustes · mueve el mouse para ver los controles',
+        'During the session: <kbd>SPACE</kbd> pause · <kbd>ESC</kbd> settings · move the mouse to see the controls',
+      )}</div>`;
     this.setupEl.querySelectorAll<HTMLButtonElement>('button.chip').forEach((b) =>
       b.addEventListener('click', () => {
         const k = b.dataset.k as 'focus' | 'short' | 'long' | 'every';
@@ -145,7 +163,8 @@ export class PomodoroUi {
       // Everything fades away while you work; moving the pointer brings the controls back.
       this.root.classList.toggle('idle', this.idle > 3 && timer.running);
       const left = timer.remaining();
-      const label = timer.waiting ? `${KIND_LABEL[timer.kind]} · lista` : `${KIND_LABEL[timer.kind]}${timer.running ? '' : ' · en pausa'}`;
+      const kind = kindLabel(timer.kind);
+      const label = timer.waiting ? `${kind} · ${tr('lista', 'ready')}` : `${kind}${timer.running ? '' : ` · ${tr('en pausa', 'paused')}`}`;
       const set = (sel: string, v: string) => {
         const el = this.timerEl.querySelector(sel) as HTMLElement;
         if (el.textContent !== v) el.textContent = v;
@@ -159,7 +178,7 @@ export class PomodoroUi {
       (this.timerEl.querySelector('.bar i') as HTMLElement).style.width = `${timer.progress() * 100}%`;
       this.timerEl.dataset.kind = timer.kind;
       this.timerEl.classList.toggle('paused', !timer.running);
-      const title = `${fmt(left)} · ${KIND_LABEL[timer.kind]} — Universe is Born`;
+      const title = `${fmt(left)} · ${kind} — Universe is Born`;
       if (title !== this.lastTitle) document.title = this.lastTitle = title;
       const key = `${timer.running}|${timer.waiting}|${timer.kind}`;
       if (key !== this.ctrlKey) {
@@ -170,8 +189,8 @@ export class PomodoroUi {
   }
 
   private buildCtrl(timer: PomodoroTimer) {
-    const play = timer.waiting ? `▶ Comenzar ${KIND_LABEL[timer.kind].toLowerCase()}` : timer.running ? '❚❚ Pausa' : '▶ Seguir';
-    this.ctrlEl.innerHTML = `<button class="btn small" data-c="toggle">${play}</button><button class="btn small" data-c="skip">⏭ Saltar</button><button class="btn small" data-c="setup">⚙ Ajustes</button><button class="btn small" data-c="exit">✕ Salir</button>`;
+    const play = timer.waiting ? `▶ ${tr('Comenzar', 'Start')} ${kindLabel(timer.kind).toLowerCase()}` : timer.running ? `❚❚ ${tr('Pausa', 'Pause')}` : `▶ ${tr('Seguir', 'Resume')}`;
+    this.ctrlEl.innerHTML = `<button class="btn small" data-c="toggle">${play}</button><button class="btn small" data-c="skip">⏭ ${tr('Saltar', 'Skip')}</button><button class="btn small" data-c="setup">⚙ ${tr('Ajustes', 'Settings')}</button><button class="btn small" data-c="exit">✕ ${tr('Salir', 'Exit')}</button>`;
     this.ctrlEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
         b.blur();

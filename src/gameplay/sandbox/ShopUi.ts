@@ -16,6 +16,7 @@ import {
   type LookOption,
 } from './Catalog';
 import type { SandboxEconomy } from './Economy';
+import { num, tr } from '../../i18n/i18n';
 
 type Tab = 'stars' | 'nebulae' | 'galaxy' | 'upgrades';
 type Qty = 1 | 10 | 'max';
@@ -30,14 +31,11 @@ export interface ShopActions {
   onClose(): void;
 }
 
-const TABS: [Tab, string][] = [
-  ['stars', 'Estrellas'],
-  ['nebulae', 'Nebulosas'],
-  ['galaxy', 'Galaxia'],
-  ['upgrades', 'Mejoras'],
-];
+const TABS: Tab[] = ['stars', 'nebulae', 'galaxy', 'upgrades'];
+const tabLabel = (t: Tab) =>
+  t === 'stars' ? tr('Estrellas', 'Stars') : t === 'nebulae' ? tr('Nebulosas', 'Nebulae') : t === 'galaxy' ? tr('Galaxia', 'Galaxy') : tr('Mejoras', 'Upgrades');
 
-export const fmtRate = (r: number) => (r < 100 ? r.toFixed(1) : formatBig(r));
+export const fmtRate = (r: number) => (r < 100 ? num(r, 1) : formatBig(r));
 
 /** Free-mode shop: a side drawer that keeps the galaxy visible (and running) behind it. */
 export class ShopUi {
@@ -56,16 +54,17 @@ export class ShopUi {
     this.root.innerHTML = `
       <div class="shop-top">
         <div>
-          <div class="label">Tienda cósmica</div>
+          <div class="label shop-title"></div>
           <div class="shop-dust"><b></b><span>✦</span></div>
           <div class="shop-rate"></div>
         </div>
-        <button class="shop-x" title="Cerrar (T)">✕</button>
+        <button class="shop-x">✕</button>
       </div>
-      <div class="shop-tabs">${TABS.map(([id, l]) => `<button data-tab="${id}">${l}</button>`).join('')}</div>
-      <div class="shop-qty seg"><button data-q="1">×1</button><button data-q="10">×10</button><button data-q="max">Máx</button></div>
+      <div class="shop-tabs">${TABS.map((id) => `<button data-tab="${id}"></button>`).join('')}</div>
+      <div class="shop-qty seg"><button data-q="1">×1</button><button data-q="10">×10</button><button data-q="max"></button></div>
       <div class="shop-list"></div>`;
     parent.appendChild(this.root);
+    this.frameTexts();
     this.list = this.root.querySelector('.shop-list') as HTMLElement;
     this.dustEl = this.root.querySelector('.shop-dust b') as HTMLElement;
     this.rateEl = this.root.querySelector('.shop-rate') as HTMLElement;
@@ -105,6 +104,19 @@ export class ShopUi {
     this.rebuild();
   }
 
+  /** Texts of the drawer frame (the list is rebuilt from scratch on every change). */
+  private frameTexts() {
+    (this.root.querySelector('.shop-title') as HTMLElement).textContent = tr('Tienda cósmica', 'Cosmic shop');
+    (this.root.querySelector('.shop-x') as HTMLElement).title = tr('Cerrar (T)', 'Close (T)');
+    this.root.querySelectorAll<HTMLButtonElement>('.shop-tabs button').forEach((b) => (b.textContent = tabLabel(b.dataset.tab as Tab)));
+    (this.root.querySelector('.shop-qty [data-q="max"]') as HTMLElement).textContent = tr('Máx', 'Max');
+  }
+
+  onLanguage() {
+    this.frameTexts();
+    this.rebuild();
+  }
+
   setOpen(v: boolean) {
     this.isOpen = v;
     this.root.classList.toggle('show', v);
@@ -123,8 +135,8 @@ export class ShopUi {
     const c2 = def.color2 ?? def.color;
     const eff =
       def.kind === 'star'
-        ? `+${fmtRate(def.prod!)} ✦/s cada una${n ? ` · <b>total +${fmtRate(def.prod! * n)} ✦/s</b>` : ''}`
-        : `+${Math.round(def.boost! * 100)}% de toda la producción cada una · <b>${n}/${NEBULA_MAX}</b>`;
+        ? `+${fmtRate(def.prod!)} ✦/s ${tr('cada una', 'each')}${n ? ` · <b>${tr('total', 'total')} +${fmtRate(def.prod! * n)} ✦/s</b>` : ''}`
+        : `${tr(`+${Math.round(def.boost! * 100)}% de toda la producción cada una`, `+${Math.round(def.boost! * 100)}% to all production each`)} · <b>${n}/${NEBULA_MAX}</b>`;
     return `<div class="shop-item" data-card="${def.id}">
       <div class="ico ${def.kind}" style="--c1:${def.color};--c2:${c2}"></div>
       <div class="body">
@@ -137,7 +149,7 @@ export class ShopUi {
   }
 
   private lockedCard() {
-    return `<div class="shop-item locked"><div class="ico"></div><div class="body"><div class="name">???</div><div class="desc">Sigue generando polvo estelar para descubrir el siguiente astro.</div></div></div>`;
+    return `<div class="shop-item locked"><div class="ico"></div><div class="body"><div class="name">???</div><div class="desc">${tr('Sigue reuniendo polvo estelar para descubrir el siguiente astro.', 'Keep gathering stardust to discover the next celestial body.')}</div></div></div>`;
   }
 
   private chips(kind: LookKind, opts: LookOption[], current: string) {
@@ -146,8 +158,9 @@ export class ShopUi {
         const owned = !!this.eco.s.unlocked[lookKey(kind, o.id)] || (o.cost === 0 && !o.lock);
         const on = o.id === current;
         const sw = o.swatch ? `<i class="sw" style="background:${o.swatch}"></i>` : '';
-        if (o.lock && !owned) return `<button class="chip locked" data-locked="1" disabled title="${o.lock}">${sw}<b>${o.name}</b><small>🔒 ${o.lock.replace('Observatorio: ', '')}</small></button>`;
-        const tag = on ? '✓' : owned ? 'Usar' : `${formatBig(o.cost)} ✦`;
+        if (o.lock && !owned)
+          return `<button class="chip locked" data-locked="1" disabled title="${tr('Observatorio', 'Observatory')}: ${o.lock}">${sw}<b>${o.name}</b><small>🔒 ${o.lock}</small></button>`;
+        const tag = on ? '✓' : owned ? tr('Usar', 'Use') : `${formatBig(o.cost)} ✦`;
         return `<button class="chip${on ? ' on' : ''}${owned ? ' owned' : ''}" data-kind="${kind}" data-id="${o.id}" data-cost="${owned ? 0 : o.cost}">${sw}<b>${o.name}</b><small>${tag}</small></button>`;
       })
       .join('');
@@ -168,23 +181,31 @@ export class ShopUi {
           html += this.lockedCard();
         }
       }
-      if (this.tab === 'nebulae') html = `<div class="shop-note">Las nebulosas multiplican <b>toda</b> tu producción. Máximo ${NEBULA_MAX} de cada tipo.</div>` + html;
+      if (this.tab === 'nebulae')
+        html =
+          `<div class="shop-note">${tr(
+            `Las nebulosas multiplican <b>toda</b> tu producción. Puedes tener hasta ${NEBULA_MAX} de cada tipo.`,
+            `Nebulae multiply <b>all</b> of your production. You can have up to ${NEBULA_MAX} of each kind.`,
+          )}</div>` + html;
     } else if (this.tab === 'galaxy') {
       const L = this.eco.s.look;
       const armOpts = ARM_OPTIONS.map((o) => (Number(o.id) === this.eco.s.base.arms ? { ...o, cost: 0 } : o));
-      html += `<div class="shop-note">Una vez comprado, cada estilo es tuyo: cámbialo cuando quieras.</div>`;
-      html += `<div class="shop-sec"><div class="label">Brazos espirales</div><div class="chips">${this.chips('arms', armOpts, String(L.arms))}</div></div>`;
-      html += `<div class="shop-sec"><div class="label">Enrollamiento</div><div class="chips">${this.chips('twist', TWIST_OPTIONS, L.twist)}</div></div>`;
-      html += `<div class="shop-sec"><div class="label">Paleta de colores</div><div class="chips">${this.chips('palette', PALETTES, L.palette)}</div></div>`;
-      html += `<div class="shop-sec"><div class="label">Barra central</div><div class="desc">Como la Vía Láctea: una barra de estrellas cruza el núcleo y alimenta los brazos.</div><div class="chips">${this.chips(
+      html += `<div class="shop-note">${tr('Cada estilo que consigues es tuyo para siempre: cámbialo cuando quieras.', 'Every style you get is yours to keep: switch whenever you like.')}</div>`;
+      html += `<div class="shop-sec"><div class="label">${tr('Brazos espirales', 'Spiral arms')}</div><div class="chips">${this.chips('arms', armOpts, String(L.arms))}</div></div>`;
+      html += `<div class="shop-sec"><div class="label">${tr('Enrollamiento', 'Winding')}</div><div class="chips">${this.chips('twist', TWIST_OPTIONS, L.twist)}</div></div>`;
+      html += `<div class="shop-sec"><div class="label">${tr('Paleta de colores', 'Color palette')}</div><div class="chips">${this.chips('palette', PALETTES, L.palette)}</div></div>`;
+      html += `<div class="shop-sec"><div class="label">${tr('Barra central', 'Central bar')}</div><div class="desc">${tr(
+        'Como en la Vía Láctea: una barra de estrellas cruza el núcleo y alimenta los brazos.',
+        'Just like the Milky Way: a bar of stars crosses the core and feeds the arms.',
+      )}</div><div class="chips">${this.chips(
         'bar',
         [
-          { id: 'off', name: 'Sin barra', cost: 0 },
-          { id: 'on', name: 'Espiral barrada', cost: this.eco.s.unlocked.bar ? 0 : BAR_COST },
+          { id: 'off', name: tr('Sin barra', 'No bar'), cost: 0 },
+          { id: 'on', name: tr('Espiral barrada', 'Barred spiral'), cost: this.eco.s.unlocked.bar ? 0 : BAR_COST },
         ],
         L.bar ? 'on' : 'off',
       )}</div></div>`;
-      html += `<div class="shop-sec"><div class="label">Color de los jets</div><div class="chips">${this.chips('jets', JET_OPTIONS, L.jets)}</div></div>`;
+      html += `<div class="shop-sec"><div class="label">${tr('Color de los chorros', 'Jet color')}</div><div class="chips">${this.chips('jets', JET_OPTIONS, L.jets)}</div></div>`;
     } else {
       for (const u of UPGRADES) {
         const lvl = this.eco.up(u.id);
@@ -193,11 +214,11 @@ export class ShopUi {
         html += `<div class="shop-item" data-card="${u.id}">
           <div class="ico glyph">${u.icon}</div>
           <div class="body">
-            <div class="name">${u.name} <span class="cnt">Nv ${lvl}/${u.costs.length}</span></div>
+            <div class="name">${u.name} <span class="cnt">${tr('Nv', 'Lv')} ${lvl}/${u.costs.length}</span></div>
             <div class="desc">${u.effect}</div>
             <div class="eff pips">${pips}</div>
           </div>
-          <button class="buy" data-up="${u.id}" ${max ? 'disabled' : ''}><span class="q">${max ? 'Completo' : 'Mejorar'}</span><b class="c"></b><small class="eta"></small></button>
+          <button class="buy" data-up="${u.id}" ${max ? 'disabled' : ''}><span class="q">${max ? tr('Completo', 'Complete') : tr('Mejorar', 'Upgrade')}</span><b class="c"></b><small class="eta"></small></button>
         </div>`;
       }
     }
@@ -216,14 +237,14 @@ export class ShopUi {
     const need = cost - this.eco.s.dust;
     if (need <= 0 || r <= 0) return '';
     const s = need / r;
-    return s < 36000 ? `en ${formatTime(s)}` : '';
+    return s < 36000 ? `${tr('en', 'in')} ${formatTime(s)}` : '';
   }
 
   /** Cheap per-tick update: prices, affordability and the header. */
   refresh() {
     const dust = this.eco.s.dust;
     this.dustEl.textContent = formatBig(dust);
-    this.rateEl.textContent = `+${fmtRate(this.act.rate())} ✦/s · nivel ${this.eco.level}`;
+    this.rateEl.textContent = `+${fmtRate(this.act.rate())} ✦/s · ${tr('nivel', 'level')} ${this.eco.level}`;
     this.qtyEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.q === String(this.qty)));
     if (this.revealSignature() !== this.revealKey) return this.rebuild();
     this.list.querySelectorAll<HTMLButtonElement>('button.buy').forEach((b) => {
@@ -233,19 +254,19 @@ export class ShopUi {
         const def = [...STARS, ...NEBULAE].find((a) => a.id === b.dataset.astro)!;
         if (this.eco.isMaxed(def)) {
           b.disabled = true;
-          (b.querySelector('.q') as HTMLElement).textContent = 'Completo';
+          (b.querySelector('.q') as HTMLElement).textContent = tr('Completo', 'Complete');
           (b.querySelector('.c') as HTMLElement).textContent = '';
           (b.querySelector('.eta') as HTMLElement).textContent = '';
           return;
         }
         const k = this.units(def);
         cost = this.eco.costOf(def, k);
-        label = `Comprar ×${k}`;
+        label = `${tr('Comprar', 'Buy')} ×${k}`;
       } else {
         const def = UPGRADES.find((u) => u.id === b.dataset.up)!;
         cost = this.eco.upgradeCost(def);
         if (!isFinite(cost)) return;
-        label = 'Mejorar';
+        label = tr('Mejorar', 'Upgrade');
       }
       b.disabled = cost > dust;
       (b.querySelector('.q') as HTMLElement).textContent = label;

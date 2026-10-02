@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { STAGES, stageDef } from '../progression/Stages';
+import { tr } from '../i18n/i18n';
 
 export const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => {
   const e = document.createElement(tag);
@@ -129,7 +130,7 @@ export class Hud {
     this.root.appendChild(this.abilities);
 
     this.helpBtn = h('button', 'hud-help interactive', '?') as HTMLButtonElement;
-    this.helpBtn.title = '¿Qué está pasando?';
+    this.helpBtn.title = tr('¿Qué está pasando?', "What's happening?");
     this.helpBtn.addEventListener('click', () => this.onHelp?.());
     this.root.appendChild(this.helpBtn);
 
@@ -156,10 +157,16 @@ export class Hud {
     document.documentElement.style.setProperty('--accent', a);
     document.documentElement.style.setProperty('--accent-2', b);
     const track = STAGES.map((s) => `<i class="${s.n < n ? 'done' : s.n === n ? 'cur' : ''}"></i>`).join('');
-    this.stageEl.innerHTML = `<div class="num">ETAPA ${String(n).padStart(2, '0')} / 15</div><div class="name">${def.name}</div><div class="track">${track}</div>`;
+    this.stageEl.innerHTML = `<div class="num">${tr('ETAPA', 'STAGE')} ${String(n).padStart(2, '0')} / 15</div><div class="name">${def.name}</div><div class="track">${track}</div>`;
   }
 
   private plateKey = '';
+
+  /** Re-renders the texts the HUD owns after a language change. */
+  refreshLanguage() {
+    this.helpBtn.title = tr('¿Qué está pasando?', "What's happening?");
+    if (!this.plateKey) this.setStage(this.stage);
+  }
 
   /** Replaces the stage plate with a custom one (free mode). `null` restores the stage. */
   setModePlate(kicker: string | null, name = '', sub = '') {

@@ -9,6 +9,8 @@ import { makeBody, STAR_COLORS, type Body, type BodyKind } from '../../entities/
 import { h } from '../../ui/Hud';
 import type { Rng } from '../../procgen/rng';
 import type { LoopHandle } from '../../audio/AudioEngine';
+import { stageDef } from '../../progression/Stages';
+import { int, num, tr } from '../../i18n/i18n';
 
 const GMK = 720; // GM = GMK * L^3 (world units)
 const CAP = 3; // capture radius (x L): innermost stable orbit
@@ -101,7 +103,7 @@ export class BlackHolePhase extends Phase {
   private hitFlash = 0;
 
   touchLabels(): [string | null, string | null] {
-    return ['Arrastre', this.jetsUnlocked ? 'Jets' : null];
+    return [tr('Arrastre', 'Drag'), this.jetsUnlocked ? tr('Chorros', 'Jets') : null];
   }
 
   enter() {
@@ -192,21 +194,39 @@ export class BlackHolePhase extends Phase {
   private async script() {
     const g = this.game;
     if (this.stageN > 7) {
-      g.hud.titleCard(this.stageTitle(), `ETAPA ${String(this.stageN).padStart(2, '0')}`, 'Continúas donde lo dejaste', 3);
+      g.hud.titleCard(stageDef(this.stageN).name, `${tr('ETAPA', 'STAGE')} ${String(this.stageN).padStart(2, '0')}`, tr('Retomas el viaje donde lo dejaste', 'You pick up the journey where you left off'), 3);
       return;
     }
     await this.wait(1);
-    g.hud.titleCard('Nacimiento del agujero negro', 'ETAPA 07', 'Ahora eres pura gravedad', 4);
+    g.hud.titleCard(stageDef(7).name, tr('ETAPA 07', 'STAGE 07'), tr('Ahora eres pura gravedad', 'Now you are pure gravity'), 4);
     await this.wait(4.5);
-    this.tutorial('bh_move', `Ya no eres una estrella: eres un <b>agujero negro</b>. ${g.input.touchMode ? 'Arrastra para moverte' : 'Mueve el cursor para desplazarte'}. Nada que cruce tu horizonte vuelve.`, 8);
+    const touch = g.input.touchMode;
+    this.tutorial(
+      'bh_move',
+      tr(
+        `Ya no eres una estrella: eres un <b>agujero negro</b>. ${touch ? 'Arrastra el dedo para moverte' : 'Mueve el cursor para desplazarte'}. Nada de lo que cruza tu horizonte puede volver.`,
+        `You are no longer a star: you are a <b>black hole</b>. ${touch ? 'Drag your finger to move' : 'Move the cursor to drift around'}. Nothing that crosses your horizon can come back.`,
+      ),
+      8,
+    );
     await this.wait(9);
-    this.tutorial('bh_orbits', 'Mira las trayectorias: <b style="color:#ffd070">doradas</b> caerán, <b style="color:#7fe0ff">cian</b> orbitarán, <b style="color:#ff6a5a">rojas</b> escaparán. No todo lo que se acerca cae.', 10);
+    this.tutorial(
+      'bh_orbits',
+      tr(
+        'Observa las trayectorias: las <b style="color:#ffd070">doradas</b> caerán, las <b style="color:#7fe0ff">cian</b> orbitarán y las <b style="color:#ff6a5a">rojas</b> escaparán. No todo lo que se acerca termina cayendo.',
+        'Watch the paths: <b style="color:#ffd070">gold</b> ones will fall in, <b style="color:#7fe0ff">cyan</b> ones will orbit and <b style="color:#ff6a5a">red</b> ones will escape. Not everything that comes close ends up falling in.',
+      ),
+      10,
+    );
     await this.wait(11);
-    this.tutorial('bh_drag', `Mantén <kbd>${g.input.touchMode ? 'ARRASTRE' : 'CLIC'}</kbd> para frenar lo que orbita a tu alrededor: pierde momento angular y cae en espiral. Consume energía.`, 9);
-  }
-
-  private stageTitle() {
-    return ['', '', '', '', '', '', '', 'Nacimiento del agujero negro', 'Acreción', 'Disco de acreción', 'Agujero negro activo', 'Crecimiento', 'Fusiones', 'Agujero negro intermedio'][this.stageN] ?? '';
+    this.tutorial(
+      'bh_drag',
+      tr(
+        `Mantén <kbd>${touch ? 'ARRASTRE' : 'CLIC'}</kbd> para frenar lo que orbita a tu alrededor: pierde momento angular y cae en espiral. Consume energía.`,
+        `Hold <kbd>${touch ? 'DRAG' : 'CLICK'}</kbd> to slow down whatever orbits you: it loses angular momentum and spirals in. Uses energy.`,
+      ),
+      9,
+    );
   }
 
   debugSkip() {
@@ -366,7 +386,7 @@ export class BlackHolePhase extends Phase {
         b.x = P.x + Math.cos(a) * 40 * L;
         b.z = P.z + Math.sin(a) * 40 * L;
         b.vx = b.vz = 0;
-        g.hud.toast('●', 'Otro agujero negro', `${b.name}: ${formatSolar(b.mass)} M☉ · más pequeño que tú`);
+        g.hud.toast('●', tr('Otro agujero negro', 'Another black hole'), `${b.name}: ${formatSolar(b.mass)} M☉ · ${tr('más pequeño que tú', 'smaller than you')}`);
       }
     }
     this.eventT -= dt;
@@ -548,7 +568,7 @@ export class BlackHolePhase extends Phase {
       s.young = true;
       out.push(s);
     }
-    g.hud.floater('¡FORMACIÓN ESTELAR!', new THREE.Vector3(b.x, 4 * this.L, b.z), '#9fd6ff', 16, 2);
+    g.hud.floater(tr('¡NACEN ESTRELLAS!', 'STARS ARE BORN!'), new THREE.Vector3(b.x, 4 * this.L, b.z), '#9fd6ff', 16, 2);
     g.pipe.final.shockwave(new THREE.Vector3(b.x, 0, b.z), 0.5, 1, 0.3);
     g.audio.ignite();
     g.prog.achieve('seeder');
@@ -603,7 +623,7 @@ export class BlackHolePhase extends Phase {
     g.pipe.final.doFlash(0.18, 0xffe0c0);
     g.pipe.bloomBoost = 1;
     g.audio.tde();
-    g.hud.floater('DISRUPCIÓN DE MAREA', new THREE.Vector3(b.x, 3 * this.L, b.z), '#ffcf9a', 15, 1.6);
+    g.hud.floater(tr('DISRUPCIÓN DE MAREA', 'TIDAL DISRUPTION'), new THREE.Vector3(b.x, 3 * this.L, b.z), '#ffcf9a', 15, 1.6);
     this.onCapture(b, bound);
   }
 
@@ -626,7 +646,7 @@ export class BlackHolePhase extends Phase {
     }
     if (b.memberCount <= 0) {
       b.alive = false;
-      this.game.hud.floater('CÚMULO DESARMADO', new THREE.Vector3(b.x, 4 * this.L, b.z), '#ffe0a0', 15, 1.6);
+      this.game.hud.floater(tr('EL CÚMULO SE DESHACE', 'THE CLUSTER UNRAVELS'), new THREE.Vector3(b.x, 4 * this.L, b.z), '#ffe0a0', 15, 1.6);
     }
   }
 
@@ -703,7 +723,7 @@ export class BlackHolePhase extends Phase {
   private startMerger(b: Body) {
     const g = this.game;
     this.jetting = false;
-    const w = h('div', 'panel', `<div class="label" style="margin-bottom:6px">Alineación de espines</div>
+    const w = h('div', 'panel', `<div class="label" style="margin-bottom:6px">${tr('Alineación de espines', 'Spin alignment')}</div>
       <svg width="130" height="130" viewBox="-65 -65 130 130">
         <circle r="50" fill="none" stroke="rgba(200,220,255,0.25)" stroke-width="2"/>
         <path class="zone" fill="none" stroke="#7dffb2" stroke-width="8" stroke-linecap="round"/>
@@ -730,9 +750,16 @@ export class BlackHolePhase extends Phase {
       chirped: false,
     };
     g.pipe.final.letterboxTarget = 0.6;
-    g.hud.titleCard('Binaria de agujeros negros', 'ÓRBITA FINAL', 'Las ondas gravitacionales se llevan la energía orbital', 3.2);
+    g.hud.titleCard(tr('Binaria de agujeros negros', 'Black hole binary'), tr('ÓRBITA FINAL', 'FINAL ORBIT'), tr('Las ondas gravitacionales se llevan la energía de la órbita', 'Gravitational waves carry away the orbital energy'), 3.2);
     g.prog.discover('gw');
-    this.tutorial('merge_spin', `Pulsa <kbd>${g.input.touchMode ? 'BOTÓN' : 'CLIC'}</kbd> cuando la aguja pase por la <b style="color:#7dffb2">zona verde</b> para alinear los espines. Tres aciertos = fusión perfecta, sin retroceso.`, 7);
+    this.tutorial(
+      'merge_spin',
+      tr(
+        `Pulsa <kbd>${g.input.touchMode ? 'BOTÓN' : 'CLIC'}</kbd> cuando la aguja pase por la <b style="color:#7dffb2">zona verde</b> para alinear los espines. Con tres aciertos, la fusión es perfecta y sin retroceso.`,
+        `Press <kbd>${g.input.touchMode ? 'BUTTON' : 'CLICK'}</kbd> when the needle crosses the <b style="color:#7dffb2">green zone</b> to align the spins. Three hits make a perfect merger, with no recoil.`,
+      ),
+      7,
+    );
     g.audio.swell(9);
   }
 
@@ -779,7 +806,7 @@ export class BlackHolePhase extends Phase {
         m.aligned++;
         m.zone = (m.zone + this.rng.range(1.6, 4.2)) % TAU;
         g.audio.hit('perfect', m.aligned * 2);
-        g.hud.floater('ESPÍN ALINEADO', m.bary.clone().add(new THREE.Vector3(0, 6 * this.L, 0)), '#7dffb2', 15, 1);
+        g.hud.floater(tr('ESPÍN ALINEADO', 'SPIN ALIGNED'), m.bary.clone().add(new THREE.Vector3(0, 6 * this.L, 0)), '#7dffb2', 15, 1);
       } else {
         g.audio.hit('miss');
       }
@@ -823,10 +850,15 @@ export class BlackHolePhase extends Phase {
       const a = this.rng.range(0, TAU);
       const kick = (3 - m.aligned) * 9 * this.L;
       this.vel.set(Math.cos(a) * kick, Math.sin(a) * kick);
-      g.hud.floater('RETROCESO GRAVITACIONAL', this.P.clone().add(new THREE.Vector3(0, 6 * this.L, 0)), '#ffb070', 16, 1.8);
+      g.hud.floater(tr('RETROCESO GRAVITACIONAL', 'GRAVITATIONAL RECOIL'), this.P.clone().add(new THREE.Vector3(0, 6 * this.L, 0)), '#ffb070', 16, 1.8);
     }
-    g.hud.titleCard(perfect ? 'Fusión perfecta' : 'Fusión', `${formatSolar(before)} + ${formatSolar(b.mass)} → ${formatSolar(this.M)} M☉`, `${Math.round(radiated * 100)}% de la masa se convirtió en ondas gravitacionales`, 4);
-    if (this.mergesDone === 1) g.hud.feel('Acabo de absorber otro agujero negro.', 4);
+    g.hud.titleCard(
+      perfect ? tr('Fusión perfecta', 'Perfect merger') : tr('Fusión', 'Merger'),
+      `${formatSolar(before)} + ${formatSolar(b.mass)} → ${formatSolar(this.M)} M☉`,
+      tr(`El ${Math.round(radiated * 100)}% de la masa se convirtió en ondas gravitacionales`, `${Math.round(radiated * 100)}% of the mass became gravitational waves`),
+      4,
+    );
+    if (this.mergesDone === 1) g.hud.feel(tr('Dos sombras se han vuelto una sola.', 'Two shadows have become one.'), 4);
     // The camera steps back: your scale just changed.
     this.L = this.scaleOf(this.M);
     g.rig.animate({ distance: this.L * this.camK * 1.1 }, 2.5);
@@ -850,7 +882,15 @@ export class BlackHolePhase extends Phase {
     g.shake(0.9);
     g.audio.boom();
     g.bus.emit('failure', { reason: 'devoured' });
-    g.hud.titleCard('Casi te devora', `${b.name} · ${formatSolar(b.mass)} M☉`, `Perdiste ${formatSolar(lost)} M☉. Aléjate de los agujeros negros mayores o empújalos con tus jets.`, 4.5);
+    g.hud.titleCard(
+      tr('Un encuentro demasiado cercano', 'Too close an encounter'),
+      `${b.name} · ${formatSolar(b.mass)} M☉`,
+      tr(
+        `Perdiste ${formatSolar(lost)} M☉. Mantén la distancia con los agujeros negros más grandes o apártalos con tus chorros.`,
+        `You lost ${formatSolar(lost)} M☉. Keep your distance from larger black holes, or push them away with your jets.`,
+      ),
+      4.5,
+    );
   }
 
   // ------------------------------------------------------------------ events & stages
@@ -864,7 +904,7 @@ export class BlackHolePhase extends Phase {
       const b = this.spawnBody(false, this.stageN >= 13 ? 'nebula' : 'gas', 0.3);
       if (b) {
         b.radius *= 2;
-        g.hud.toast('☁', 'Nube molecular gigante', 'Una enorme nube de gas se acerca');
+        g.hud.toast('☁', tr('Nube molecular gigante', 'Giant molecular cloud'), tr('Una enorme nube de gas se acerca', 'A huge cloud of gas is drifting closer'));
       }
     } else if (ev === 'perturb') {
       for (const b of this.bodies) {
@@ -877,7 +917,7 @@ export class BlackHolePhase extends Phase {
         }
       }
       g.pipe.final.shockwave(this.P.clone(), 0.6, 2, 1.5);
-      g.hud.toast('〰', 'Perturbación gravitacional', 'La materia cercana cae hacia ti');
+      g.hud.toast('〰', tr('Perturbación gravitacional', 'Gravitational disturbance'), tr('La materia cercana empieza a caer hacia ti', 'Nearby matter starts falling toward you'));
     } else if (ev === 'hyper') {
       const b = this.spawnBody(false, 'star', 0.35);
       if (b) {
@@ -885,7 +925,7 @@ export class BlackHolePhase extends Phase {
         b.vx = Math.cos(a) * 20 * L;
         b.vz = Math.sin(a) * 20 * L;
         b.color = [0.7, 0.8, 1];
-        g.hud.toast('✧', 'Estrella hiperveloz', 'Una estrella masiva cruza a toda velocidad. ¿Podrás atraparla?');
+        g.hud.toast('✧', tr('Estrella hiperveloz', 'Hypervelocity star'), tr('Una estrella masiva cruza a toda velocidad. ¿Podrás atraparla?', 'A massive star races past. Can you catch it?'));
       }
     } else if (ev === 'supernova') {
       const cands = this.bodies.filter((b) => b.kind === 'star' && Math.hypot(b.x - this.P.x, b.z - this.P.z) > 20 * L);
@@ -912,10 +952,10 @@ export class BlackHolePhase extends Phase {
       }
       if (this.stageN >= 11) this.bodies.push(makeBody('ns', this.rng, this.M, L, s.x, s.z, s.vx, s.vz));
       this.addStream(s.x, s.z, s.vx, s.vz, 1, 60, 3 * L);
-      g.hud.toast('✺', 'Supernova cercana', 'Una estrella vecina explotó y dejó gas y restos');
+      g.hud.toast('✺', tr('Supernova cercana', 'Nearby supernova'), tr('Una estrella vecina estalló y dejó gas y restos a su paso', 'A neighboring star exploded, leaving gas and debris behind'));
     } else if (ev === 'rogue') {
       const b = this.spawnBody(false, 'bh');
-      if (b) g.hud.toast('●', 'Agujero negro errante', `${b.name}: ${formatSolar(b.mass)} M☉ ${b.mass > this.M * 1.3 ? '· ¡PELIGRO!' : ''}`);
+      if (b) g.hud.toast('●', tr('Agujero negro errante', 'Wandering black hole'), `${b.name}: ${formatSolar(b.mass)} M☉${b.mass > this.M * 1.3 ? tr(' · cuidado, es más grande', ' · careful, it is larger') : ''}`);
     }
   }
 
@@ -935,10 +975,24 @@ export class BlackHolePhase extends Phase {
     else if (s === 9 && M >= GATES.jets) this.jetsCinematic();
     else if (s === 10 && M >= GATES.growth) {
       this.setStage(11);
-      this.tutorial('bh_sources', 'Nuevas presas: <b>enanas blancas</b> y <b>estrellas de neutrones</b> caen enteras, pero son rápidas. Cuidado con el haz de los púlsares: drena tu energía.', 9);
+      this.tutorial(
+        'bh_sources',
+        tr(
+          'Nuevos visitantes: las <b>enanas blancas</b> y las <b>estrellas de neutrones</b> caen enteras, aunque se mueven rápido. Cuidado con el haz de los púlsares: agota tu energía.',
+          'New visitors: <b>white dwarfs</b> and <b>neutron stars</b> fall in whole, though they move fast. Watch out for pulsar beams: they drain your energy.',
+        ),
+        9,
+      );
     } else if (s === 11 && M >= GATES.mergers) {
       this.setStage(12);
-      this.tutorial('bh_rivals', 'Aparecen otros agujeros negros. Los <b style="color:#7dffb2">verdes</b> son más pequeños: acércate para fusionarte. Los <b style="color:#ff4d5e">rojos</b> son mayores: huye o empújalos con tus jets.', 10);
+      this.tutorial(
+        'bh_rivals',
+        tr(
+          'Aparecen otros agujeros negros. Los <b style="color:#7dffb2">verdes</b> son más pequeños: acércate para fusionarte con ellos. Los <b style="color:#ff4d5e">rojos</b> son más grandes: mantén la distancia o apártalos con tus chorros.',
+          'Other black holes appear. <b style="color:#7dffb2">Green</b> ones are smaller: get close to merge with them. <b style="color:#ff4d5e">Red</b> ones are larger: keep your distance or push them away with your jets.',
+        ),
+        10,
+      );
     } else if (s === 12 && M >= GATES.imbh) this.imbhCinematic();
     else if (s === 13 && M >= GATES.smbh) this.smbhTransition();
   }
@@ -958,7 +1012,7 @@ export class BlackHolePhase extends Phase {
     g.audio.ignite();
     g.pipe.final.doFlash(0.45, 0xffd0a0);
     g.pipe.bloomBoost = 2;
-    g.hud.titleCard('Disco de acreción', 'ETAPA 09', 'Gas a millones de grados, girando casi a la velocidad de la luz', 4.5);
+    g.hud.titleCard(stageDef(9).name, tr('ETAPA 09', 'STAGE 09'), tr('Gas a millones de grados, girando casi a la velocidad de la luz', 'Gas at millions of degrees, swirling at nearly the speed of light'), 4.5);
     g.prog.discover('lensing');
     await this.wait(5);
     g.rig.animate(back, 2.5);
@@ -977,7 +1031,7 @@ export class BlackHolePhase extends Phase {
     this.energy = 1;
     g.rig.target.copy(this.P);
     g.rig.animate({ distance: this.L * 42, pitch: 0.5 }, 2.2);
-    g.hud.titleCard('Campo magnético retorcido', 'ALGO SE ESTÁ FORMANDO', '', 2.5);
+    g.hud.titleCard(tr('Un campo magnético retorcido', 'A twisted magnetic field'), tr('ALGO ESTÁ TOMANDO FORMA', 'SOMETHING IS TAKING SHAPE'), '', 2.5);
     await this.wait(2.5);
     this.jetsUnlocked = true;
     this.jetAxis.set(1, 0, 0.3).normalize();
@@ -988,7 +1042,7 @@ export class BlackHolePhase extends Phase {
     g.pipe.bloomBoost = 3;
     g.shake(0.7);
     g.audio.boom();
-    g.hud.titleCard('Jets relativistas', 'ETAPA 10', 'Plasma disparado al 99% de la velocidad de la luz', 4);
+    g.hud.titleCard(tr('Chorros relativistas', 'Relativistic jets'), tr('ETAPA 10', 'STAGE 10'), tr('Plasma lanzado al 99% de la velocidad de la luz', 'Plasma launched at 99% of the speed of light'), 4);
     await this.wait(3.5);
     this.jetting = false;
     g.pipe.final.letterboxTarget = 0;
@@ -996,7 +1050,15 @@ export class BlackHolePhase extends Phase {
     await this.wait(1);
     this.cinematic = false;
     g.touch.setLabels(...this.touchLabels());
-    this.tutorial('bh_jets', `Mantén <kbd>${g.input.touchMode ? 'JETS' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para disparar jets hacia ${g.input.touchMode ? 'donde te mueves' : 'el cursor'}. Empujan cuerpos, repelen agujeros negros mayores y, si golpean una nube de gas, <b>forman estrellas</b> nuevas.`, 11);
+    const touch = g.input.touchMode;
+    this.tutorial(
+      'bh_jets',
+      tr(
+        `Mantén <kbd>${touch ? 'CHORROS' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para lanzar chorros hacia ${touch ? 'donde te mueves' : 'el cursor'}. Empujan cuerpos, apartan a los agujeros negros más grandes y, si alcanzan una nube de gas, <b>hacen nacer estrellas</b> nuevas.`,
+        `Hold <kbd>${touch ? 'JETS' : 'R-CLICK'}</kbd> (or <kbd>SHIFT</kbd>) to fire jets toward ${touch ? 'where you move' : 'the cursor'}. They push bodies, keep larger black holes away and, if they reach a gas cloud, <b>spark new stars</b>.`,
+      ),
+      11,
+    );
     this.persist();
   }
 
@@ -1011,13 +1073,20 @@ export class BlackHolePhase extends Phase {
     // Populate the wider neighbourhood.
     for (let i = 0; i < 4; i++) this.spawnBody(false, i % 2 ? 'cluster' : 'nebula');
     g.rig.animate({ distance: this.L * 120, pitch: 0.85 }, 5);
-    g.hud.titleCard('Agujero negro intermedio', 'ETAPA 13', 'Tu entorno ahora son cúmulos y nebulosas enteras', 5);
+    g.hud.titleCard(stageDef(13).name, tr('ETAPA 13', 'STAGE 13'), tr('Ahora te rodean cúmulos y nebulosas enteras', 'Now whole clusters and nebulae surround you'), 5);
     await this.wait(6);
     g.rig.animate({ distance: this.L * this.camK }, 3);
     g.pipe.final.letterboxTarget = 0;
     await this.wait(1.5);
     this.cinematic = false;
-    this.tutorial('bh_clusters', 'Los <b>cúmulos</b> se desarman con tu marea: acércate y sus estrellas caerán una a una. Las <b>nebulosas</b> te alimentan de forma continua.', 9);
+    this.tutorial(
+      'bh_clusters',
+      tr(
+        'Los <b>cúmulos</b> se deshacen con tu marea: acércate y sus estrellas caerán una a una. Las <b>nebulosas</b> te alimentan sin pausa.',
+        '<b>Clusters</b> unravel under your tide: get close and their stars will fall in one by one. <b>Nebulae</b> feed you steadily.',
+      ),
+      9,
+    );
     this.persist();
   }
 
@@ -1027,7 +1096,7 @@ export class BlackHolePhase extends Phase {
     this.transitioning = true;
     g.pipe.final.letterboxTarget = 1;
     g.audio.swell(12);
-    g.hud.titleCard('Un millón de masas solares', 'SUPERMASIVO', '', 3.5);
+    g.hud.titleCard(tr('Un millón de masas solares', 'A million solar masses'), tr('SUPERMASIVO', 'SUPERMASSIVE'), '', 3.5);
     g.rig.animate({ distance: this.L * 260, pitch: 1.1 }, 4.5);
     await this.wait(4);
     this.jetLoop?.stop(0.5);
@@ -1145,7 +1214,7 @@ export class BlackHolePhase extends Phase {
           }
           const bigger = b.mass > this.M * 1.3;
           const cls = bigger ? 'danger' : b.mass < this.M * 0.8 ? 'prey' : 'neutral';
-          g.hud.marker('bh' + b.id, new THREE.Vector3(b.x, 0, b.z - Lr * 4), `${b.name}<div class="m">${formatSolar(b.mass)} M☉${bigger ? ' · PELIGRO' : ''}</div>`, cls);
+          g.hud.marker('bh' + b.id, new THREE.Vector3(b.x, 0, b.z - Lr * 4), `${b.name}<div class="m">${formatSolar(b.mass)} M☉${bigger ? tr(' · CUIDADO', ' · CAREFUL') : ''}</div>`, cls);
           let ring = this.dangerRings.get(b.id);
           if (!ring) {
             ring = new Ring(0xff4d5e, false, 0.008);
@@ -1282,30 +1351,30 @@ export class BlackHolePhase extends Phase {
     const g = this.game;
     const input = g.input;
     const rsKm = 2.95 * this.M;
-    const rsTxt = rsKm < 1e6 ? `${Math.round(rsKm).toLocaleString('es')} km` : `${(rsKm / 1.496e8).toFixed(2)} UA`;
-    g.hud.setMass(formatSolar(this.M), 'M☉', `radio de Schwarzschild ≈ ${rsTxt}`);
+    const rsTxt = rsKm < 1e6 ? `${int(rsKm)} km` : `${num(rsKm / 1.496e8, 2)} ${tr('UA', 'AU')}`;
+    g.hud.setMass(formatSolar(this.M), 'M☉', `${tr('radio de Schwarzschild', 'Schwarzschild radius')} ≈ ${rsTxt}`);
     const s = this.stageN;
     const range = (a: number, b: number) => clamp(Math.log(this.M / a) / Math.log(b / a));
     const obj: Record<number, [string, number | null]> = {
-      7: ['Acércate a la materia y captúrala', null],
-      8: [`Captura materia · alcanza ${formatSolar(Math.max(GATES.disk, this.M0 * 1.8))} M☉`, range(this.M0, Math.max(GATES.disk, this.M0 * 1.8))],
-      9: [`Alimenta el disco · alcanza ${GATES.jets} M☉`, range(GATES.disk, GATES.jets)],
-      10: [`Crece con ayuda de tus jets · ${GATES.growth} M☉`, range(GATES.jets, GATES.growth)],
-      11: [`Aliméntate de todo · ${GATES.mergers} M☉`, range(GATES.growth, GATES.mergers)],
-      12: [`Fusiónate con otros agujeros negros · ${formatSolar(GATES.imbh)} M☉`, range(GATES.mergers, GATES.imbh)],
-      13: [`Domina tu entorno · 1 millón M☉`, range(GATES.imbh, GATES.smbh)],
+      7: [tr('Acércate a la materia y captúrala', 'Get close to matter and capture it'), null],
+      8: [`${tr('Captura materia · alcanza', 'Capture matter · reach')} ${formatSolar(Math.max(GATES.disk, this.M0 * 1.8))} M☉`, range(this.M0, Math.max(GATES.disk, this.M0 * 1.8))],
+      9: [`${tr('Alimenta el disco · alcanza', 'Feed the disk · reach')} ${GATES.jets} M☉`, range(GATES.disk, GATES.jets)],
+      10: [`${tr('Crece con ayuda de tus chorros', 'Grow with the help of your jets')} · ${GATES.growth} M☉`, range(GATES.jets, GATES.growth)],
+      11: [`${tr('Atrae todo lo que puedas', 'Draw in all you can')} · ${GATES.mergers} M☉`, range(GATES.growth, GATES.mergers)],
+      12: [`${tr('Fusiónate con otros agujeros negros', 'Merge with other black holes')} · ${formatSolar(GATES.imbh)} M☉`, range(GATES.mergers, GATES.imbh)],
+      13: [`${tr('Sigue creciendo · 1 millón de M☉', 'Keep growing · 1 million M☉')}`, range(GATES.imbh, GATES.smbh)],
     };
-    const [txt, p] = this.merger ? ['Fusión en curso: alinea los espines', clamp(this.merger.t / this.merger.T)] : obj[s] ?? ['', null];
+    const [txt, p] = this.merger ? [tr('Fusión en curso: alinea los espines', 'Merger in progress: align the spins'), clamp(this.merger.t / this.merger.T)] : obj[s] ?? ['', null];
     g.hud.setObjective(txt, p);
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     g.hud.setMeters([
-      { id: 'energy', label: 'Energía', value: this.energy, color: this.hitFlash > 0 ? '#ff5a3c' : '#8fd3ff', warn: this.hitFlash > 0 },
-      { id: 'acc', label: 'Acreción', value: clamp(Math.sqrt(this.accRate) * 3), text: this.accRate > 0.001 ? `${(this.accRate * 100).toFixed(1)}%/s` : '—', color: '#ffb46b' },
-      ...(this.diskUnlocked ? [{ id: 'disk', label: 'Disco', value: clamp(this.disk / this.M), text: `${formatSolar(this.disk)} M☉`, color: '#ff8a5a' }] : []),
+      { id: 'energy', label: tr('Energía', 'Energy'), value: this.energy, color: this.hitFlash > 0 ? '#ff5a3c' : '#8fd3ff', warn: this.hitFlash > 0 },
+      { id: 'acc', label: tr('Acreción', 'Accretion'), value: clamp(Math.sqrt(this.accRate) * 3), text: this.accRate > 0.001 ? `${num(this.accRate * 100, 1)}%/s` : '—', color: '#ffb46b' },
+      ...(this.diskUnlocked ? [{ id: 'disk', label: tr('Disco', 'Disk'), value: clamp(this.disk / this.M), text: `${formatSolar(this.disk)} M☉`, color: '#ff8a5a' }] : []),
     ]);
     this.abilities([
-      { id: 'drag', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Arrastre', active: this.dragging, charge: this.energy },
-      { id: 'jets', key: input.touchMode ? 'BTN 2' : 'CLIC DER', name: 'Jets', locked: !this.jetsUnlocked, active: this.jetting },
+      { id: 'drag', key: input.touchMode ? 'BTN' : tr('CLIC', 'CLICK'), name: tr('Arrastre', 'Drag'), active: this.dragging, charge: this.energy },
+      { id: 'jets', key: input.touchMode ? 'BTN 2' : tr('CLIC DER', 'R-CLICK'), name: tr('Chorros', 'Jets'), locked: !this.jetsUnlocked, active: this.jetting },
     ]);
     g.audio.setIntensity(0.3 + clamp(Math.sqrt(this.accRate) * 2) * 0.3 + this.jetPower * 0.25 + (this.merger ? 0.3 : 0));
   }

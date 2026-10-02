@@ -7,6 +7,7 @@ import { SKY_PRESETS } from '../../vfx/Sky';
 import { clamp, damp, lerp, formatSolar } from '../../utils/math';
 import { h } from '../../ui/Hud';
 import type { Rng } from '../../procgen/rng';
+import { num, tr } from '../../i18n/i18n';
 
 const IGNITION = 10; // MK
 const BAND = 0.3;
@@ -85,7 +86,7 @@ export class ProtostarPhase extends Phase {
   private pulse = 0;
 
   touchLabels(): [string | null, string | null] {
-    return ['Contraer', 'Chorro'];
+    return [tr('Contraer', 'Contract'), tr('Chorro', 'Jet')];
   }
 
   enter() {
@@ -123,12 +124,26 @@ export class ProtostarPhase extends Phase {
     this.group.add(this.jetUp, this.jetDown);
 
     // Balance gauge widget
-    const w = h('div', 'balance panel', `<div class="label">Equilibrio hidrostático</div><div class="scale"><div class="rail"></div><div class="zone"></div><div class="needle"></div></div><div class="ends"><span>Colapso</span><span>Equilibrio</span><span>Expansión</span></div>`);
+    const w = h('div', 'balance panel', `<div class="label"></div><div class="scale"><div class="rail"></div><div class="zone"></div><div class="needle"></div></div><div class="ends"><span></span><span></span><span></span></div>`);
     g.hud.widget.appendChild(w);
+    this.gaugeEl = w;
+    this.onLanguage();
     this.gauge = { needle: w.querySelector('.needle') as HTMLElement, zone: w.querySelector('.zone') as HTMLElement };
     this.gauge.zone.style.left = `${(0.5 - BAND / 2) * 100}%`;
     this.gauge.zone.style.width = `${BAND * 100}%`;
     this.script();
+  }
+
+  private gaugeEl: HTMLElement | null = null;
+
+  onLanguage() {
+    const w = this.gaugeEl;
+    if (!w) return;
+    (w.querySelector('.label') as HTMLElement).textContent = tr('Equilibrio hidrostático', 'Hydrostatic balance');
+    const ends = w.querySelectorAll('.ends span');
+    ends[0].textContent = tr('Colapso', 'Collapse');
+    ends[1].textContent = tr('Equilibrio', 'Balance');
+    ends[2].textContent = tr('Expansión', 'Expansion');
   }
 
   private respawn(i: number, initial = false) {
@@ -142,13 +157,34 @@ export class ProtostarPhase extends Phase {
   private async script() {
     const g = this.game;
     await this.wait(1);
-    g.hud.titleCard('Protoestrella', 'ETAPA 03', 'El núcleo empieza a calentarse', 3.5);
+    g.hud.titleCard(tr('Protoestrella', 'Protostar'), tr('ETAPA 03', 'STAGE 03'), tr('El núcleo empieza a calentarse', 'The core begins to warm up'), 3.5);
     await this.wait(4);
-    this.tutorial('s3_balance', `La gravedad comprime, la presión empuja. Mantén la aguja en la <b>zona verde</b>. Mantener <kbd>${g.input.touchMode ? 'CONTRAER' : 'CLIC'}</kbd> calienta el núcleo más rápido, pero inclina la balanza hacia el colapso.`, 10);
+    this.tutorial(
+      's3_balance',
+      tr(
+        `La gravedad comprime y la presión empuja. Mantén la aguja en la <b>zona verde</b>. Si mantienes <kbd>${g.input.touchMode ? 'CONTRAER' : 'CLIC'}</kbd>, el núcleo se calienta más rápido, pero la balanza se inclina hacia el colapso.`,
+        `Gravity squeezes and pressure pushes back. Keep the needle in the <b>green zone</b>. Holding <kbd>${g.input.touchMode ? 'CONTRACT' : 'CLICK'}</kbd> heats the core faster, but tips the balance toward collapse.`,
+      ),
+      10,
+    );
     await this.wait(11);
-    this.tutorial('s3_vent', `Las <b>fulguraciones</b> empujan hacia la expansión. Usa <kbd>${g.input.touchMode ? 'CHORRO' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para liberar un chorro bipolar y aliviar la presión.`, 9);
+    this.tutorial(
+      's3_vent',
+      tr(
+        `Las <b>fulguraciones</b> empujan hacia la expansión. Usa <kbd>${g.input.touchMode ? 'CHORRO' : 'CLIC DER'}</kbd> (o <kbd>SHIFT</kbd>) para liberar un chorro bipolar y aliviar la presión.`,
+        `<b>Flares</b> push toward expansion. Use <kbd>${g.input.touchMode ? 'JET' : 'R-CLICK'}</kbd> (or <kbd>SHIFT</kbd>) to release a bipolar jet and ease the pressure.`,
+      ),
+      9,
+    );
     await this.wait(10);
-    this.tutorial('s3_clumps', 'Muévete para atrapar los grumos de gas que caen: más masa hará una estrella más grande (y un destino más oscuro).', 8);
+    this.tutorial(
+      's3_clumps',
+      tr(
+        'Muévete para atrapar los grumos de gas que caen: con más masa, la estrella será más grande… y su destino, más sorprendente.',
+        'Move around to catch the falling clumps of gas: with more mass, the star will be bigger… and its fate more astonishing.',
+      ),
+      8,
+    );
   }
 
   debugSkip() {
@@ -193,7 +229,7 @@ export class ProtostarPhase extends Phase {
         if (this.flareWarn <= 0) {
           this.flarePending = 0.5;
           this.flareTimer = this.rng.range(6, 10) * (1 - (this.Tc / IGNITION) * 0.35);
-          g.hud.floater('FULGURACIÓN', P.clone().add(new THREE.Vector3(0, 4, 0)), '#ffcf6b', 15, 1.2);
+          g.hud.floater(tr('FULGURACIÓN', 'FLARE'), P.clone().add(new THREE.Vector3(0, 4, 0)), '#ffcf6b', 15, 1.2);
           g.pipe.final.shockwave(P.clone(), 0.4, 0.9, 0.3);
           g.audio.whoosh(0.2);
         }
@@ -209,7 +245,7 @@ export class ProtostarPhase extends Phase {
         this.burstTimer = this.rng.range(9, 15);
         this.vE -= 0.55;
         this.mass += 0.4;
-        g.hud.floater('ESTALLIDO DE ACRECIÓN', P.clone().add(new THREE.Vector3(0, 4, 0)), '#ff9a6a', 14, 1.2);
+        g.hud.floater(tr('ESTALLIDO DE ACRECIÓN', 'ACCRETION BURST'), P.clone().add(new THREE.Vector3(0, 4, 0)), '#ff9a6a', 14, 1.2);
         g.audio.thump(0.25);
       }
       // Bipolar outflow (vent)
@@ -232,7 +268,7 @@ export class ProtostarPhase extends Phase {
         this.E = 0.12;
         this.vE = 0;
         this.Tc = Math.max(1, this.Tc - 0.8);
-        g.hud.floater('EXPANSIÓN · PIERDES MASA', P.clone().add(new THREE.Vector3(0, 5, 0)), '#6ab8ff', 16, 1.8);
+        g.hud.floater(tr('EXPANSIÓN · PIERDES MASA', 'EXPANSION · MASS LOST'), P.clone().add(new THREE.Vector3(0, 5, 0)), '#6ab8ff', 16, 1.8);
         g.pipe.final.shockwave(P.clone(), 0.8, 1.2, 0.6);
         g.shake(0.35);
         g.audio.thump(0.4);
@@ -242,7 +278,7 @@ export class ProtostarPhase extends Phase {
         this.E = -0.12;
         this.vE = 0;
         this.Tc = Math.max(1, this.Tc - 1.4);
-        g.hud.floater('COLAPSO PARCIAL · REBOTE', P.clone().add(new THREE.Vector3(0, 5, 0)), '#ff6a4a', 16, 1.8);
+        g.hud.floater(tr('COLAPSO PARCIAL · REBOTE', 'PARTIAL COLLAPSE · BOUNCE'), P.clone().add(new THREE.Vector3(0, 5, 0)), '#ff6a4a', 16, 1.8);
         g.shake(0.5);
         g.audio.thump(0.5);
         this.pulse = -1;
@@ -275,15 +311,18 @@ export class ProtostarPhase extends Phase {
     const pos = (clamp(this.E, -1, 1) + 1) / 2;
     this.gauge.needle.style.left = `${pos * 100}%`;
     this.gauge.needle.style.background = Math.abs(this.E) < BAND ? '#7dffb2' : Math.abs(this.E) > 0.75 ? '#ff5a3c' : '#fff';
-    g.hud.setMass(formatSolar(this.mass), 'M☉', this.mass < 10 ? '¡peligro: masa baja!' : 'protoestrella');
-    g.hud.setObjective(this.done ? 'Ignición' : `Calienta el núcleo hasta 10 millones K · ${this.Tc.toFixed(1)} MK`, (this.Tc - 1) / (IGNITION - 1));
+    g.hud.setMass(formatSolar(this.mass), 'M☉', this.mass < 10 ? tr('cuidado: queda poca masa', 'careful: mass is running low') : tr('protoestrella', 'protostar'));
+    g.hud.setObjective(
+      this.done ? tr('Ignición', 'Ignition') : `${tr('Calienta el núcleo hasta 10 millones de K', 'Heat the core to 10 million K')} · ${num(this.Tc, 1)} MK`,
+      (this.Tc - 1) / (IGNITION - 1),
+    );
     g.hud.setMeters([
-      { id: 'tc', label: 'Temperatura del núcleo', value: (this.Tc - 1) / (IGNITION - 1), text: `${this.Tc.toFixed(1)} MK`, color: '#ffb46b' },
-      { id: 'vent', label: 'Chorro bipolar', value: 1 - this.ventCd / 2.5, text: this.ventCd > 0 ? '…' : 'LISTO', color: '#ff8a5a' },
+      { id: 'tc', label: tr('Temperatura del núcleo', 'Core temperature'), value: (this.Tc - 1) / (IGNITION - 1), text: `${num(this.Tc, 1)} MK`, color: '#ffb46b' },
+      { id: 'vent', label: tr('Chorro bipolar', 'Bipolar jet'), value: 1 - this.ventCd / 2.5, text: this.ventCd > 0 ? '…' : tr('LISTO', 'READY'), color: '#ff8a5a' },
     ]);
     this.abilities([
-      { id: 'contract', key: input.touchMode ? 'BTN' : 'CLIC', name: 'Contraer', active: holding },
-      { id: 'vent', key: input.touchMode ? 'BTN 2' : 'CLIC DER', name: 'Chorro bipolar', charge: 1 - this.ventCd / 2.5 },
+      { id: 'contract', key: input.touchMode ? 'BTN' : tr('CLIC', 'CLICK'), name: tr('Contraer', 'Contract'), active: holding },
+      { id: 'vent', key: input.touchMode ? 'BTN 2' : tr('CLIC DER', 'R-CLICK'), name: tr('Chorro bipolar', 'Bipolar jet'), charge: 1 - this.ventCd / 2.5 },
     ]);
     g.audio.setIntensity(0.35 + heat * 0.4 + Math.abs(this.E) * 0.2);
     if (!this.cinematic) {
@@ -314,7 +353,7 @@ export class ProtostarPhase extends Phase {
         c.alive = false;
         this.mass += c.mass;
         this.vE -= 0.22;
-        g.hud.floater(`+${c.mass.toFixed(1)} M☉`, new THREE.Vector3(x, 2, z), '#ffd0a0', 15, 1.2);
+        g.hud.floater(`+${num(c.mass, 1)} M☉`, new THREE.Vector3(x, 2, z), '#ffd0a0', 15, 1.2);
         g.audio.capture(0.3);
       } else if (c.r < 2) c.alive = false;
     }
@@ -372,10 +411,15 @@ export class ProtostarPhase extends Phase {
     this.failed = true;
     this.cinematic = true;
     g.bus.emit('failure', { reason: 'lowmass' });
-    g.hud.titleCard('Masa insuficiente', 'FRACASO', 'Con tan poca masa no habrá supernova: tu destino sería una estrella común.', 5);
+    g.hud.titleCard(
+      tr('Falta un poco de masa', 'Not quite enough mass'),
+      tr('UN NUEVO INTENTO', "LET'S TRY AGAIN"),
+      tr('Con tan poca masa no habrá supernova: serías una estrella tranquila, como el Sol.', "With this little mass there will be no supernova: you'd become a calm star, like the Sun."),
+      5,
+    );
     g.audio.thump(0.5);
     await this.wait(5);
-    g.hud.hint('Evita las expansiones: cada una expulsa parte de tu masa. Reintentando…', 5);
+    g.hud.hint(tr('Evita las expansiones: cada una se lleva parte de tu masa. Volvamos a intentarlo…', "Avoid expansions: each one carries away part of your mass. Let's try again…"), 5);
     await g.goto('protostar', { starMass: Math.max(this.carry.starMass ?? 18, 16) });
   }
 
@@ -398,7 +442,7 @@ export class ProtostarPhase extends Phase {
     g.pipe.final.shockwave(this.P.clone(), 1.2, 2, 1.2);
     g.shake(0.7);
     g.audio.boom();
-    g.hud.titleCard('Nace una estrella', 'IGNICIÓN', 'La fusión del hidrógeno ha comenzado', 4.5);
+    g.hud.titleCard(tr('Nace una estrella', 'A star is born'), tr('IGNICIÓN', 'IGNITION'), tr('La fusión del hidrógeno ha comenzado', 'Hydrogen fusion has begun'), 4.5);
     g.prog.achieve('first_light');
     if (this.events === 0) g.prog.achieve('perfect_balance');
     g.sky.set(SKY_PRESETS.stellar, 3);
