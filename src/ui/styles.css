@@ -4,9 +4,11 @@
   --danger: #ff4d5e;
   --ok: #7dffb2;
   --text: #e9eef7;
-  --dim: rgba(220, 230, 255, 0.55);
+  --dim: rgba(220, 230, 255, 0.78);
   --line: rgba(200, 220, 255, 0.18);
-  --glass: rgba(8, 10, 20, 0.42);
+  --glass: rgba(6, 8, 16, 0.82);
+  --glass-soft: rgba(6, 8, 16, 0.62);
+  --shadow-text: 0 0 2px #000, 0 0 6px #000, 0 1px 10px rgba(0, 0, 0, 0.9);
   --font-display: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
   color-scheme: dark;
@@ -105,12 +107,12 @@ html, body {
 }
 #title .sub { color: var(--dim); max-width: 460px; margin: 18px 0 38px; line-height: 1.6; font-size: 15px; }
 #title .menu { display: flex; flex-direction: column; gap: 6px; }
-#title .foot { position: absolute; bottom: 22px; left: 8vw; right: 8vw; display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
+#title .foot { position: absolute; bottom: 22px; left: 8vw; right: 8vw; display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; }
 
 /* ------------------------------------------------------------------ overlay screens */
 .screen {
-  position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,5,0.55);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,6,0.72);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
 }
 .screen.show { opacity: 1; pointer-events: auto; }
@@ -288,3 +290,79 @@ input[type=range] { accent-color: var(--accent); width: 180px; }
 .brief-how { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; font-size: 14px; color: #d8def0; }
 .brief-how li { margin-bottom: 6px; }
 .brief-how li::marker { color: var(--accent); }
+
+/* ================================================================== readability
+   Everything with text over the game gets a solid-enough backing. */
+.screen .panel { background: rgba(7, 9, 18, 0.94); }
+.hint.panel, .toast.panel, .hud-widget .panel { background: var(--glass); }
+.hint .h { font-size: 15.5px; text-shadow: none; }
+#title .sub { color: rgba(225, 232, 248, 0.86); text-shadow: var(--shadow-text); }
+#title .kicker, #title .btn { text-shadow: var(--shadow-text); }
+
+/* Top-left stage, top-centre objective, top-right mass: compact plates */
+.hud-stage, .hud-mass {
+  background: var(--glass-soft);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+}
+.hud-stage { top: 14px; left: 16px; }
+.hud-mass { top: 14px; right: 66px; }
+.hud-obj {
+  top: 14px;
+  background: var(--glass);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  padding: 9px 18px 10px;
+}
+.hud-obj .txt { font-size: 14.5px; text-shadow: none; }
+.hud-meters {
+  top: 100px; right: 16px;
+  background: var(--glass-soft);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+}
+.hud-meters:empty { display: none; }
+.hud-meters .label, .hud-mass .d, .hud-mass .u { color: rgba(225, 232, 248, 0.85); }
+.ability { background: var(--glass); }
+.ability .key { color: rgba(225, 232, 248, 0.9); }
+
+/* Big cinematic text: a soft dark halo band behind it */
+.titlecard > div {
+  padding: 34px clamp(30px, 8vw, 120px);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 45%, rgba(0, 0, 0, 0) 72%);
+}
+.titlecard .b { text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow-text); }
+.titlecard .s { color: rgba(230, 236, 250, 0.9); text-shadow: var(--shadow-text); font-size: 14px; }
+.titlecard .k { text-shadow: var(--shadow-text); }
+.feel {
+  left: 50%; right: auto; transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 32px);
+  padding: 10px 28px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.35) 55%, rgba(0, 0, 0, 0) 75%);
+  text-shadow: var(--shadow-text), 0 0 40px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* World-anchored text */
+.floater { text-shadow: var(--shadow-text); font-weight: 600; }
+.marker {
+  background: rgba(6, 8, 16, 0.72);
+  border: 1px solid currentColor;
+  padding: 3px 8px;
+  text-shadow: none;
+}
+.marker .m { color: rgba(225, 232, 248, 0.9); opacity: 1; }
+
+@media (max-width: 760px) {
+  .hud-stage { top: 8px; left: 8px; padding: 6px 10px; }
+  .hud-mass { top: 8px; right: 54px; padding: 6px 10px; }
+  .hud-obj { top: 76px; padding: 6px 12px; }
+  .hud-meters { top: 132px; right: 8px; padding: 8px 10px; }
+  .titlecard > div { padding: 24px 20px; }
+}
+
+/* Toasts live in the right column under the meters, never over hints. */
+.toasts { top: 290px; bottom: auto; right: 16px; }
+@media (max-width: 760px) { .toasts { top: 260px; right: 8px; } }
