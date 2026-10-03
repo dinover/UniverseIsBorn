@@ -12,6 +12,7 @@ De un puñado de átomos en el universo oscuro al corazón de una galaxia. Un vi
 - Galaxia espiral de hasta 220.000 estrellas animada en GPU (brazos por ondas de densidad).
 - Gráficos y audio **100% procedurales** (shaders + WebAudio): sin assets externos ni licencias.
 - Calidad gráfica Baja / Media / Alta / Automática, controles de teclado, mouse y táctiles.
+- **Interfaz holográfica**: paneles con esquinas biseladas y bordes de energía, medidores tipo LED, textos que se "decodifican" como una transmisión y una retícula que sigue al agujero negro en la pantalla de título. Respeta la preferencia del sistema de reducir el movimiento.
 - Códice científico opcional, logros, estadísticas y guardado local.
 - **Bilingüe: español e inglés.** El idioma se elige solo según el navegador y se puede cambiar en cualquier momento desde la pantalla de título (`ES · EN`) o en **Opciones**.
 

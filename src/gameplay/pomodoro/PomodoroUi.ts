@@ -134,9 +134,14 @@ export class PomodoroUi {
         this.buildSetup();
       }),
     );
-    this.setupEl.querySelectorAll<HTMLInputElement>('input[data-vol]').forEach((i) =>
-      i.addEventListener('input', () => this.act.volume({ [i.dataset.vol as 'music' | 'sfx']: parseFloat(i.value) })),
-    );
+    this.setupEl.querySelectorAll<HTMLInputElement>('input[data-vol]').forEach((i) => {
+      const fill = () => i.style.setProperty('--p', `${parseFloat(i.value) * 100}%`);
+      fill();
+      i.addEventListener('input', () => {
+        fill();
+        this.act.volume({ [i.dataset.vol as 'music' | 'sfx']: parseFloat(i.value) });
+      });
+    });
     this.setupEl.querySelectorAll<HTMLButtonElement>('button[data-a]').forEach((b) =>
       b.addEventListener('click', () => {
         b.blur();

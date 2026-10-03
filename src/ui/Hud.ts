@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { STAGES, stageDef } from '../progression/Stages';
 import { tr } from '../i18n/i18n';
+import { decode } from './fx';
 
 export const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => {
   const e = document.createElement(tag);
@@ -278,8 +279,16 @@ export class Hud {
     this.feelTimer = seconds;
   }
 
+  /** Fades out the emotional line right away (and drops a pending one). */
+  clearFeel() {
+    this.pendingFeel = null;
+    this.feelTimer = 0;
+    this.feelEl.classList.remove('show');
+  }
+
   titleCard(big: string, kicker = '', sub = '', seconds = 4) {
     this.cardEl.innerHTML = `<div><div class="k">${kicker}</div><div class="b">${big}</div><div class="s">${sub}</div></div>`;
+    decode(this.cardEl.querySelector('.k'), 700);
     this.cardEl.classList.add('show');
     this.cardTimer = seconds;
   }
@@ -288,6 +297,7 @@ export class Hud {
     const el = h('div', 'toast panel' + (onClick ? ' clickable' : ''), `<div class="i">${icon}</div><div><div class="t">${title}</div><div class="s">${sub}</div></div>`);
     if (onClick) el.addEventListener('click', onClick);
     this.toastsEl.appendChild(el);
+    decode(el.querySelector('.t'), 500);
     while (this.toastsEl.children.length > 4) this.toastsEl.firstElementChild!.remove();
     setTimeout(() => {
       el.classList.add('out');

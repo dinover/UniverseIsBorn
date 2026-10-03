@@ -57,7 +57,10 @@ export class PomodoroPhase extends Phase {
         skip: () => this.skipSegment(),
         setup: () => this.toSetup(),
         exit: () => g.quitToTitle(),
-        skipIntro: () => this.intro?.skip(),
+        skipIntro: () => {
+          this.intro?.skip();
+          this.game.hud.clearFeel();
+        },
         changed: () => {
           savePomo(this.save);
           this.director.travel = this.save.settings.travel;

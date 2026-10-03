@@ -9,6 +9,7 @@ import { stageDef } from '../progression/Stages';
 import { briefing } from '../progression/Briefings';
 import { levelFor } from '../gameplay/sandbox/Catalog';
 import { getLang, setLang, tr, type Lang } from '../i18n/i18n';
+import { decode } from './fx';
 
 export interface MenuCallbacks {
   onNewGame(): void;
@@ -32,6 +33,8 @@ export class Menus {
   private continueSub!: HTMLElement;
   private sandboxBtn!: HTMLButtonElement;
   private sandboxSub!: HTMLElement;
+  private reticle: HTMLElement | null = null;
+  private reticleKey = '';
 
   constructor(private parent: HTMLElement, private prog: Progression, private audio: AudioEngine, private cb: MenuCallbacks) {
     this.title = h('div', 'interactive');
@@ -43,6 +46,8 @@ export class Menus {
   private buildTitle() {
     const cb = this.cb;
     this.title.innerHTML = `
+      <div class="t-frame"></div>
+      ${this.reticleHtml()}
       <div class="kicker">${tr('UNA ODISEA GRAVITACIONAL', 'A GRAVITATIONAL ODYSSEY')}</div>
       <h1>Universe<br/>is Born</h1>
       <div class="sub">${tr(
@@ -50,7 +55,10 @@ export class Menus {
         'You begin as a handful of atoms in the darkness of the young universe and grow into the heart of a galaxy. A gentle journey to discover, at your own pace, how stars are born.',
       )}</div>
       <div class="menu"></div>
-      <div class="foot"><span>${tr('WebGL · Gráficos y sonido 100% procedurales', 'WebGL · 100% procedural graphics and sound')}</span><span class="stats-line"></span></div>`;
+      <div class="foot"><span>${tr('WebGL · Gráficos y sonido 100% procedurales', 'WebGL · 100% procedural graphics and sound')}</span><span class="coords">Sgr A* · RA 17h 45m 40s · Dec −29° 00′ 28″</span><span class="stats-line"></span></div>`;
+    (this.title.querySelector('h1') as HTMLElement).dataset.text = 'Universe\nis Born';
+    this.reticle = this.title.querySelector('.reticle');
+    this.reticleKey = '';
     this.title.appendChild(this.langSwitch());
     const menu = this.title.querySelector('.menu') as HTMLElement;
     this.continueBtn = this.button(menu, tr('Continuar', 'Continue'), '', () => cb.onContinue());
@@ -71,6 +79,41 @@ export class Menus {
     this.button(menu, tr('Logros', 'Achievements'), tr('Tus hitos y estadísticas', 'Your milestones and stats'), () => this.openAchievements());
     this.button(menu, tr('Opciones', 'Options'), '', () => this.openOptions());
     this.refreshTitle();
+  }
+
+  /** Targeting reticle that locks onto the title black hole (positioned by `setReticle`). */
+  private reticleHtml() {
+    const ticks = Array.from({ length: 4 }, (_, i) => `<line x1="0" y1="-100" x2="0" y2="-88" transform="rotate(${i * 90})"/>`).join('');
+    const brackets = Array.from({ length: 4 }, (_, i) => `<path d="M -54 -70 L -70 -70 L -70 -54" transform="rotate(${i * 90})"/>`).join('');
+    return `<div class="reticle" aria-hidden="true">
+      <svg viewBox="-100 -100 200 200" fill="none" stroke="#5ef2ff" stroke-linecap="square">
+        <g class="rt-a">
+          <circle r="94" stroke-width="0.6" stroke-dasharray="1.5 5" opacity="0.7"/>
+          <path d="M 0 -94 A 94 94 0 0 1 66.5 -66.5" stroke-width="2" opacity="0.9"/>
+          <path d="M 0 94 A 94 94 0 0 1 -66.5 66.5" stroke-width="2" stroke="#a28bff" opacity="0.9"/>
+        </g>
+        <g class="rt-b">
+          <circle r="80" stroke-width="5" stroke-dasharray="0.6 4.6" opacity="0.45"/>
+          <path d="M 80 0 A 80 80 0 0 1 56.6 56.6" stroke-width="1.2" stroke="#ff5fd6" opacity="0.8"/>
+        </g>
+        <g class="rt-c" stroke-width="1.6">${brackets}</g>
+        <g stroke-width="1" opacity="0.8">${ticks}</g>
+        <circle r="62" stroke-width="0.5" opacity="0.35"/>
+      </svg>
+      <div class="rt-label">${tr('Horizonte de sucesos', 'Event horizon')}<small>Rₛ = 2GM/c²</small></div>
+    </div>`;
+  }
+
+  /** Keeps the reticle on the black hole: screen position and shadow radius in px. */
+  setReticle(x: number, y: number, r: number) {
+    if (!this.reticle) return;
+    const key = `${Math.round(x)}|${Math.round(y)}|${Math.round(r)}`;
+    if (key === this.reticleKey) return;
+    this.reticleKey = key;
+    const s = this.reticle.style;
+    s.setProperty('--rx', `${x.toFixed(1)}px`);
+    s.setProperty('--ry', `${y.toFixed(1)}px`);
+    s.setProperty('--rr', `${Math.max(60, r).toFixed(1)}px`);
   }
 
   /** Compact ES / EN switch for the title screen. */
@@ -109,13 +152,19 @@ export class Menus {
       const panel = h('div', b.narrow ? 'panel narrow' : 'panel');
       s.appendChild(panel);
       b.build(panel);
+      this.transmit(panel);
       panel.scrollTop = scroll;
     }
   }
 
   private button(parent: HTMLElement, label: string, sub: string, fn: () => void) {
-    const b = h('button', 'btn', `${label}<small>${sub}</small>`) as HTMLButtonElement;
-    b.addEventListener('mouseenter', () => this.audio.ui('hover'));
+    const b = h('button', 'btn', `<span class="t">${label}</span><small>${sub}</small>`) as HTMLButtonElement;
+    const t = b.querySelector('.t') as HTMLElement;
+    b.addEventListener('mouseenter', () => {
+      this.audio.ui('hover');
+      decode(t, 380);
+    });
+    b.addEventListener('focus', () => decode(t, 380));
     b.addEventListener('click', () => {
       this.audio.init();
       this.audio.ui('click');
@@ -171,10 +220,17 @@ export class Menus {
     const panel = h('div', narrow ? 'panel narrow' : 'panel');
     s.appendChild(panel);
     build(panel);
+    this.transmit(panel);
     void s.offsetWidth; // force style flush so the fade-in transition still plays
     s.classList.add('show');
     if (this.stack[this.stack.length - 1] !== id) this.stack.push(id);
     this.audio.ui('open');
+  }
+
+  /** A screen arrives like a transmission: its heading decodes and a scan line crosses it. */
+  private transmit(panel: HTMLElement) {
+    panel.style.setProperty('--scan-h', `${Math.max(200, panel.scrollHeight)}px`);
+    decode(panel.querySelector('h2'), 650);
   }
 
   close() {
@@ -287,8 +343,11 @@ export class Menus {
         i.max = '1';
         i.step = '0.05';
         i.value = String(s[key]);
+        const fill = () => i.style.setProperty('--p', `${s[key] * 100}%`);
+        fill();
         i.addEventListener('input', () => {
           s[key] = parseFloat(i.value);
+          fill();
           apply();
         });
         r.appendChild(i);

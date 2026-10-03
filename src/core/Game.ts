@@ -26,6 +26,10 @@ export type SceneId = PhaseId | 'title' | 'sandbox' | 'pomodoro';
 
 type Mode = 'title' | 'playing' | 'paused' | 'transition';
 
+const _bh = new THREE.Vector3();
+const _edge = new THREE.Vector3();
+const _right = new THREE.Vector3();
+
 /**
  * Orchestrates everything: render loop, phases, menus, saving, settings and global services.
  */
@@ -451,7 +455,21 @@ export class Game {
     this.hud.update(dt, this.camera);
     this.touch.updateStick(this.input.stickActive, this.input.stickOriginPx.x, this.input.stickOriginPx.y, this.input.stick.x, this.input.stick.y);
     this.pipe.render(dt, this.time);
+    if (this.mode === 'title') this.trackTitleTarget();
     if (this.debug) this.fpsEl.textContent = `${this.quality.fps.toFixed(0)} fps · ${this.quality.profile.level} · x${this.quality.resolutionScale.toFixed(2)}`;
+  }
+
+  /** The title reticle follows the black hole on screen, sized to its shadow. */
+  private trackTitleTarget() {
+    const bh = this.pipe.bhPass;
+    if (!bh.primaryActive) return;
+    _bh.copy(bh.bhPos).project(this.camera);
+    _right.setFromMatrixColumn(this.camera.matrixWorld, 0);
+    _edge.copy(bh.bhPos).addScaledVector(_right, bh.rs * 2.6).project(this.camera);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const r = Math.abs(_edge.x - _bh.x) * 0.5 * W;
+    this.menus.setReticle((_bh.x * 0.5 + 0.5) * W, (-_bh.y * 0.5 + 0.5) * H, r * 1.55);
   }
 
   /** Shows the stage briefing (and pauses) once intros, cinematics and fades are over. */
