@@ -14,7 +14,10 @@ import { StarBurst } from './minigames/StarBurst';
 import { DwarfMerger } from './minigames/DwarfMerger';
 import { Slingshot } from './minigames/Slingshot';
 import { CONSTELLATIONS, drawFigure, placeFigure } from './minigames/constellations';
-import { int, tr, withText, type Bi } from '../../i18n/i18n';
+import { getLang, int, tr, withText, type Bi } from '../../i18n/i18n';
+
+/** Dust We Are: a separate game where a planetary nebula's dust becomes a new solar system. */
+export const DUST_WE_ARE_URL = 'https://dinover.github.io/DustWeAre/';
 
 export interface MinigameDef {
   id: string;
@@ -337,8 +340,32 @@ export class Observatory {
           locked ? `🔒 ${tr('Galaxia nivel', 'Galaxy level')} ${d.level}` : e > 0 ? tr('Jugar · ◆ 1', 'Play · ◆ 1') : tr('Practicar (20%)', 'Practice (20%)')
         }</button>
       </div>`;
-    }).join('');
+    }).join('') + this.dustWeAreCard();
     this.renderEnergy();
+  }
+
+  /** Last card: a link to Dust We Are, opened once the galaxy holds a planetary nebula. */
+  private dustWeAreCard() {
+    const open = this.host.eco.count('planetary') > 0;
+    const url = `${DUST_WE_ARE_URL}?from=uib&lang=${getLang()}`;
+    const tip = open
+      ? tr('Un juego aparte: se abre en una pestaña nueva y tu galaxia sigue aquí, esperándote.', 'A separate game: it opens in a new tab and your galaxy stays right here, waiting for you.')
+      : tr('Compra una nebulosa planetaria en la tienda para abrir este viaje.', 'Buy a planetary nebula in the shop to open this journey.');
+    return `<div class="obs-card dwa${open ? '' : ' locked'}" title="${tip}">
+        <div class="obs-ico">✺</div>
+        <div class="obs-name">Dust We Are</div>
+        <div class="obs-tag">${tr('Un juego aparte', 'A separate game')}</div>
+        <div class="obs-desc">${tr(
+          'Tu nebulosa planetaria da a luz una estrella nueva: convierte su polvo en mundos y haz nacer la vida.',
+          'Your planetary nebula gives birth to a new star: turn its dust into worlds and let life begin.',
+        )}</div>
+        <div class="obs-best">${open ? tr('Se abre en una pestaña nueva', 'Opens in a new tab') : ''}</div>
+        ${
+          open
+            ? `<a class="btn small" href="${url}" target="_blank" rel="noopener">${tr('Viajar ↗', 'Travel ↗')}</a>`
+            : `<button class="btn small" disabled>🔒 ${tr('Nebulosa planetaria', 'Planetary nebula')}</button>`
+        }
+      </div>`;
   }
 
   private renderEnergy() {

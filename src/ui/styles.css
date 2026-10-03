@@ -852,6 +852,13 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: 0; bord
 .obs-extra { font-size: 11px; color: #ffe2aa; }
 .obs-best { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.06em; color: var(--ui); min-height: 14px; }
 .obs-card .btn { width: 100%; text-align: center; margin-top: 4px; padding: 8px 8px; font-size: 11px; letter-spacing: 0.12em; }
+/* Dust We Are: a warmer, dustier card that hints at another world. */
+.obs-card.dwa { --fbg: linear-gradient(170deg, rgba(255, 170, 90, 0.16), rgba(20, 10, 6, 0.86) 50%); }
+.obs-card.dwa:hover:not(.locked) { filter: drop-shadow(0 0 12px rgba(255, 160, 80, 0.4)); --fbg: linear-gradient(170deg, rgba(255, 170, 90, 0.28), rgba(20, 10, 6, 0.82) 55%); }
+.obs-card.dwa .obs-ico { color: #ffc27a; text-shadow: 0 0 14px rgba(255, 150, 60, 0.8); }
+.obs-card.dwa .obs-best { color: #ffc27a; }
+.obs-tag { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #ffc27a; }
+.obs-card a.btn { display: block; text-decoration: none; }
 
 .mg-layer { position: absolute; inset: 0; display: none; touch-action: none; }
 .mg-layer.show { display: block; }
